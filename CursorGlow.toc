@@ -2,7 +2,7 @@
 ## Title: CursorGlow
 ## Notes: Makes it easy to keep track of where your cursor is located.
 ## Author: SharpeEdge-Gaming
-## Version: 1.0
+## Version: 1.1
 ## DefaultState: enabled
 ## IconTexture: 237545
 ## SavedVariables: CursorGlowSettings
