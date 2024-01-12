@@ -25,7 +25,15 @@ local colorOptions = {
     white = {1, 1, 1},    -- White color
     pink = {1, 0.08, 0.58}, -- Pink color
     orange = {1, 0.65, 0}, -- Orange color
-    cyan = {0, 1, 1}     -- Cyan color
+    cyan = {0, 1, 1},     -- Cyan color
+    yellow = {1, 1, 0},   -- Yellow color
+    gray = {0.5, 0.5, 0.5},-- Gray color
+    gold = {1, 0.84, 0},  -- Gold color
+    teal = {0, 0.5, 0.5}, -- Teal color
+    magenta = {1, 0, 1},  -- Magenta color
+    lime = {0.75, 1, 0},  -- Lime color
+    olive = {0.5, 0.5, 0},-- Olive color
+    navy = {0, 0, 0.5}    -- Navy color
 }
 
 -- Initialize default settings with added size range
@@ -105,25 +113,33 @@ local options = {
                     end,
                 },
                 color = {
-                    type = 'select',
-                    name = 'Color',
-                    desc = 'Select the color for the texture',
-                    order = 2,
-                    values = {
-                        red = 'Red',
-                        green = 'Green',
-                        blue = 'Blue',
-                        purple = 'Purple',
-                        white = 'White',
-                        pink = 'Pink',
-                        orange = 'Orange',
-                        cyan = 'Cyan'
-                    },
-                    get = function() return CursorGlowSettings.color end,
-                    set = function(_, val)
-                        CursorGlowSettings.color = val
-                        UpdateTextureColor(val)
-                    end,
+    type = 'select',
+    name = 'Color',
+    desc = 'Select the color for the texture',
+    order = 2,
+    values = {
+        red = 'Red',
+        green = 'Green',
+        blue = 'Blue',
+        purple = 'Purple',
+        white = 'White',
+        pink = 'Pink',
+        orange = 'Orange',
+        cyan = 'Cyan',
+        yellow = 'Yellow',   -- Existing Yellow
+        gray = 'Gray',       -- Existing Gray
+        gold = 'Gold',       -- Existing Gold
+        teal = 'Teal',       -- Added Teal
+        magenta = 'Magenta', -- Added Magenta
+        lime = 'Lime',       -- Added Lime
+        olive = 'Olive',     -- Added Olive
+        navy = 'Navy'        -- Added Navy
+    },
+    get = function() return CursorGlowSettings.color end,
+    set = function(_, val)
+        CursorGlowSettings.color = val
+        UpdateTextureColor(val)
+    end,
                 },
                 opacity = {
                     type = 'range',
