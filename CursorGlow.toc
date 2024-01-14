@@ -6,6 +6,7 @@
 ## DefaultState: enabled
 ## IconTexture: 237545
 ## SavedVariables: CursorGlowSettings
+## SavedVariablesPerCharacter: CursorGlowCharacterSettings
 
 embeds.xml
 CursorGlow.lua
