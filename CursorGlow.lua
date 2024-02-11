@@ -2,10 +2,63 @@ local AceConfig = LibStub("AceConfig-3.0")
 local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 
 -- Define texture options
-local textureOptions = {
-    ["star4"] = "Interface\\Cooldown\\star4",
-    ["starburst"] = "Interface\\Cooldown\\starburst",
+local textureOptions = {   
+	["ring1"] = "Interface\\Addons\\CursorGlow\\Textures\\Test2.png",
+	["ring2"] = "Interface\\Addons\\CursorGlow\\Textures\\Test3.png",
+	["ring3"] = "Interface\\Addons\\CursorGlow\\Textures\\Test4.png",
+	["ring4"] = "Interface\\Addons\\CursorGlow\\Textures\\Test6.png",
+	["ring5"] = "Interface\\Addons\\CursorGlow\\Textures\\Test5.png",
+	["ring6"] = "Interface\\Addons\\CursorGlow\\Textures\\Test8.png",
+	["ring7"] = "Interface\\Addons\\CursorGlow\\Textures\\Test7.png",
+	["ring8"] = "Interface\\Addons\\CursorGlow\\Textures\\Test9.png",
+	["ring9"] = "Interface\\Addons\\CursorGlow\\Textures\\Test10.png",
+	["ring10"] = "Interface\\Addons\\CursorGlow\\Textures\\Star1.png",
+	["ring11"] = "Interface\\Addons\\CursorGlow\\Textures\\Star2.png",
+	["ring12"] = "Interface\\Addons\\CursorGlow\\Textures\\Star3.png",
+	["ring13"] = "Interface\\Cooldown\\star4",
+    ["ring14"] = "Interface\\Cooldown\\starburst",
+		
 }
+
+local orderedKeys = {
+    "ring1", 
+	"ring2", 
+	"ring3", 
+	"ring4", 
+	"ring5",
+    "ring6", 
+	"ring7", 
+	"ring8", 
+	"ring9", 
+	"ring10",
+    "ring11", 
+	"ring12", 
+	"ring13", 
+	"ring14"
+}
+
+local displayNames = {
+    ring1 = 'Ring 1',
+    ring2 = 'Ring 2',
+    ring3 = 'Ring 3',
+    ring4 = 'Ring 4',
+    ring5 = 'Ring 5',
+    ring6 = 'Ring 6',
+    ring7 = 'Ring 7',
+    ring8 = 'Ring 8',
+    ring9 = 'Ring 9',
+    ring10 = 'Star 1',
+    ring11 = 'Star 2',
+    ring12 = 'Star 3',
+    ring13 = 'Star 4',
+    ring14 = 'Starburst',
+}
+
+-- Build the values table dynamically
+local values = {}
+for _, key in ipairs(orderedKeys) do
+    values[key] = displayNames[key]
+end
 
 -- Create the main frame and texture
 local frame = CreateFrame("Frame", nil, UIParent)
@@ -62,7 +115,7 @@ local function GetDefaultClassColor()
 end
 
 -- Initialize default settings with class color
-local defaultClassColor = GetDefaultClassColor() -- Ensure this line correctly initializes the variable
+local defaultClassColor = GetDefaultClassColor() 
 CursorGlowCharacterSettings = CursorGlowCharacterSettings or {
     operationMode = "enabledAlways", -- Default mode
     color = defaultClassColor,
@@ -167,11 +220,7 @@ local options = {
                     name = 'Texture',
                     desc = 'Select the texture for the cursor glow',
                     order = 1,
-                    values = {
-                        star4 = 'Star4',
-                        starburst = 'Starburst',
-                        -- Additional textures can be added here
-                    },
+                    values = values, 
                     get = function() return CursorGlowCharacterSettings.texture end,
                     set = function(_, val)
                         CursorGlowCharacterSettings.texture = val
@@ -286,7 +335,6 @@ frame:RegisterEvent("PLAYER_REGEN_ENABLED")
 
 -- OnUpdate function for the frame
 frame:SetScript("OnUpdate", function(self, elapsed)
-    -- Ensure settings have valid values
     CursorGlowCharacterSettings.maxSize = CursorGlowCharacterSettings.maxSize or 128
     CursorGlowCharacterSettings.minSize = CursorGlowCharacterSettings.minSize or 16
 
