@@ -327,11 +327,23 @@ frame:SetScript("OnEvent", function(self, event, ...)
         UpdateAddonVisibility() -- Ensure correct initial visibility
     elseif event == "PLAYER_REGEN_DISABLED" or event == "PLAYER_REGEN_ENABLED" then
         UpdateAddonVisibility() -- Directly update visibility based on combat state
+    elseif event == "ZONE_CHANGED_NEW_AREA" or event == "PLAYER_ENTERING_WORLD" then
+        -- Code to reapply the correct texture size or reset UI components
+        UpdateTexture(CursorGlowCharacterSettings.texture)
+        UpdateTextureColor(CursorGlowCharacterSettings.color)
+        UpdateAddonVisibility()
+        -- Optionally reset the speed calculation if necessary
+        speed = 0
     end
 end)
+
+-- Register additional events for handling zone changes and player world entry
 frame:RegisterEvent("ADDON_LOADED")
 frame:RegisterEvent("PLAYER_REGEN_DISABLED")
 frame:RegisterEvent("PLAYER_REGEN_ENABLED")
+frame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
+frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+
 
 -- OnUpdate function for the frame
 frame:SetScript("OnUpdate", function(self, elapsed)
