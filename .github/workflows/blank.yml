@@ -1,0 +1,27 @@
+              - name: WoW Packager
+                uses: BigWigsMods/packager@v2.0.3
+            name: Release WoW Addon
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  package-and-release:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    - name: Package Addon
+      run: |
+        echo "Replace this with commands to package your addon"
+      
+    # Optional step to upload the package if you have an API
+    - name: Upload to Distribution Platform
+      run: |
+        echo "Replace this with command to upload your package"
+      env:
+        API_TOKEN: ${{ secrets.API_TOKEN }}
