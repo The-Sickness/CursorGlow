@@ -1,3 +1,9 @@
+-- CursorGlow
+-- Made by Sharpedge_Gaming
+-- v1.0.6 - 10.2.5
+
+local currentVersion = "1.0.6"
+
 local AceConfig = LibStub("AceConfig-3.0")
 local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 
@@ -12,11 +18,20 @@ local textureOptions = {
 	["ring7"] = "Interface\\Addons\\CursorGlow\\Textures\\Test7.png",
 	["ring8"] = "Interface\\Addons\\CursorGlow\\Textures\\Test9.png",
 	["ring9"] = "Interface\\Addons\\CursorGlow\\Textures\\Test10.png",
-	["ring10"] = "Interface\\Addons\\CursorGlow\\Textures\\Star1.png",
-	["ring11"] = "Interface\\Addons\\CursorGlow\\Textures\\Star2.png",
-	["ring12"] = "Interface\\Addons\\CursorGlow\\Textures\\Star3.png",
-	["ring13"] = "Interface\\Cooldown\\star4",
-    ["ring14"] = "Interface\\Cooldown\\starburst",
+	["ring10"] = "Interface\\Addons\\CursorGlow\\Textures\\Test11.png",
+	["ring11"] = "Interface\\Addons\\CursorGlow\\Textures\\Star1.png",
+	["ring12"] = "Interface\\Addons\\CursorGlow\\Textures\\Star2.png",
+	["ring13"] = "Interface\\Addons\\CursorGlow\\Textures\\Star3.png",
+	["ring14"] = "Interface\\Cooldown\\star4",
+    ["ring15"] = "Interface\\Cooldown\\starburst",
+	["ring16"] = "Interface\\Addons\\CursorGlow\\Textures\\Test12.png",
+	["ring17"] = "Interface\\Addons\\CursorGlow\\Textures\\Test13.png",
+	["ring18"] = "Interface\\Addons\\CursorGlow\\Textures\\Test14.png",
+	["ring19"] = "Interface\\Addons\\CursorGlow\\Textures\\Test15.png",
+	["ring20"] = "Interface\\Addons\\CursorGlow\\Textures\\Test16.png",
+	["ring21"] = "Interface\\Addons\\CursorGlow\\Textures\\Test17.png",
+	["ring22"] = "Interface\\Addons\\CursorGlow\\Textures\\Test18.png",
+	
 		
 }
 
@@ -34,7 +49,15 @@ local orderedKeys = {
     "ring11", 
 	"ring12", 
 	"ring13", 
-	"ring14"
+	"ring14",
+	"ring15",
+	"ring16",
+	"ring17",
+	"ring18",
+	"ring19",
+	"ring20",
+	"ring21",
+	"ring22",
 }
 
 local displayNames = {
@@ -48,12 +71,19 @@ local displayNames = {
     ring8 = 'Ring 8',
     ring9 = 'Ring 9',
     ring10 = 'Star 1',
-    ring11 = 'Star 2',
+	ring11 = 'Star 2',
     ring12 = 'Star 3',
     ring13 = 'Star 4',
-    ring14 = 'Starburst',
+    ring14 = 'Star 5',
+    ring15 = 'Starburst',
+	ring16 = 'Butterfly',
+	ring17 = 'Butterfly2',
+	ring18 = 'Butterfly3',
+	ring19 = 'Swirl',
+	ring20 = 'Swirl2',
+	ring21 = 'Horde',
+	ring22 = 'Alliance',
 }
-
 -- Build the values table dynamically
 local values = {}
 for _, key in ipairs(orderedKeys) do
@@ -320,11 +350,41 @@ AceConfigDialog:AddToBlizOptions("CursorGlow", "CursorGlow")
 -- Variables for cursor tracking
 local x, y, speed = 0, 0, 0
 
+StaticPopupDialogs["CURSORGLOW_UPDATE_AVAILABLE"] = {
+    text = "A new version of CursorGlow is available. Please update to the latest version.",
+    button1 = "OK",
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+    preferredIndex = 3,  -- Avoid taint from UIParent reuse
+}
+
+-- Function to check for updates
+local function CheckForAddonUpdates()
+    if not CursorGlowCharacterSettings then
+        CursorGlowCharacterSettings = {}
+    end
+
+    local lastSeenVersion = CursorGlowCharacterSettings.lastSeenVersion or ""
+
+    if lastSeenVersion ~= currentVersion then
+        -- Notify the user about the update with a popup
+        StaticPopup_Show("CURSORGLOW_UPDATE_AVAILABLE")
+
+        -- Update the last seen version in saved variables
+        CursorGlowCharacterSettings.lastSeenVersion = currentVersion
+    end
+end
+
 frame:SetScript("OnEvent", function(self, event, ...)
     if event == "ADDON_LOADED" and ... == "CursorGlow" then
         UpdateTextureColor(CursorGlowCharacterSettings.color or GetDefaultClassColor())
         UpdateTexture(CursorGlowCharacterSettings.texture)
         UpdateAddonVisibility() -- Ensure correct initial visibility
+
+        -- Now check for updates
+        CheckForAddonUpdates()
+        
     elseif event == "PLAYER_REGEN_DISABLED" or event == "PLAYER_REGEN_ENABLED" then
         UpdateAddonVisibility() -- Directly update visibility based on combat state
     elseif event == "ZONE_CHANGED_NEW_AREA" or event == "PLAYER_ENTERING_WORLD" then
@@ -343,7 +403,6 @@ frame:RegisterEvent("PLAYER_REGEN_DISABLED")
 frame:RegisterEvent("PLAYER_REGEN_ENABLED")
 frame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
-
 
 -- OnUpdate function for the frame
 frame:SetScript("OnUpdate", function(self, elapsed)
