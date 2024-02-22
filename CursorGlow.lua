@@ -1,8 +1,6 @@
 -- CursorGlow
 -- Made by Sharpedge_Gaming
--- v1.0.6 - 10.2.5
-
-local currentVersion = "1.0.6"
+-- v1.6 - 10.2.5
 
 local AceConfig = LibStub("AceConfig-3.0")
 local AceConfigDialog = LibStub("AceConfigDialog-3.0")
@@ -350,40 +348,11 @@ AceConfigDialog:AddToBlizOptions("CursorGlow", "CursorGlow")
 -- Variables for cursor tracking
 local x, y, speed = 0, 0, 0
 
-StaticPopupDialogs["CURSORGLOW_UPDATE_AVAILABLE"] = {
-    text = "A new version of CursorGlow is available. Please update to the latest version.",
-    button1 = "OK",
-    timeout = 0,
-    whileDead = true,
-    hideOnEscape = true,
-    preferredIndex = 3,  -- Avoid taint from UIParent reuse
-}
-
--- Function to check for updates
-local function CheckForAddonUpdates()
-    if not CursorGlowCharacterSettings then
-        CursorGlowCharacterSettings = {}
-    end
-
-    local lastSeenVersion = CursorGlowCharacterSettings.lastSeenVersion or ""
-
-    if lastSeenVersion ~= currentVersion then
-        -- Notify the user about the update with a popup
-        StaticPopup_Show("CURSORGLOW_UPDATE_AVAILABLE")
-
-        -- Update the last seen version in saved variables
-        CursorGlowCharacterSettings.lastSeenVersion = currentVersion
-    end
-end
-
 frame:SetScript("OnEvent", function(self, event, ...)
     if event == "ADDON_LOADED" and ... == "CursorGlow" then
         UpdateTextureColor(CursorGlowCharacterSettings.color or GetDefaultClassColor())
         UpdateTexture(CursorGlowCharacterSettings.texture)
         UpdateAddonVisibility() -- Ensure correct initial visibility
-
-        -- Now check for updates
-        CheckForAddonUpdates()
         
     elseif event == "PLAYER_REGEN_DISABLED" or event == "PLAYER_REGEN_ENABLED" then
         UpdateAddonVisibility() -- Directly update visibility based on combat state
