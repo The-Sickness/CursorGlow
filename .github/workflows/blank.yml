@@ -1,28 +1,2 @@
-name: Upload to CurseForge
 
-on:
-  push:
-    tags:
-      - 'v*'
-
-jobs:
-  build-and-upload:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
-
-    - name: Build addon package
-      run: |
-        # Your build script here
-
-    - name: Upload to CurseForge
-      uses: BigWigsMods/packager@master
-      with:
-        cf-api-key: ${{ secrets.CURSEFORGE_API_TOKEN }}
-        game-version: 'wow_retail'
-        addon-id: '956233'
-        package-folder: './path-to-your-addon'
-        tag: ${{ github.ref_name }}
 
