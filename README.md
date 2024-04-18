@@ -1,51 +1,18 @@
-Pretty straight forward addon. CursorGlow will add a animation whenever you move your cursor so that it stands out when you are having a hard time finding it in PVP, a Raid, and or Dungeons. You can enable the addon to only work while you are in combat. You can enable it to be active at all times. Or you can disable it. Choice is yours.
+CursorGlow is an immersive, highly customizable addon designed to enhance your World of Warcraft gameplay by adding dynamic visual effects to your cursor. This addon brings life to your cursor with various glowing textures and colors that can be adjusted to match your character or your mood.
 
- 
+Key Features:
 
-Colors are:
+Class Color Initialization: On first use, CursorGlow automatically sets the cursor glow to your character's class color, offering a personalized touch right from the start.
+Wide Variety of Textures: Choose from over 20 unique textures including rings and stars, designed to suit all tastes and preferences.
+Customizable Colors: Beyond the initial class color, you have a spectrum of color choices from simple RGB to specific WoW class colors.
+Dynamic Size Adjustment: The addon smartly adjusts the texture size based on your movement, making the cursor glow more noticeable during rapid movements.
+Combat Mode Specificity: Configure CursorGlow to activate only during combat, always, or even just on your cursor, giving you full control over when you see the effects.
+Easy Configuration: Comes with a straightforward configuration menu integrated into the WoW interface, allowing you to personalize settings without typing commands.
+Whether you want your cursor to stand out with a bright pink star during a raid or a subtle blue swirl while exploring, CursorGlow offers a fun and functional way to make your gameplay experience uniquely yours. Perfect for streamers looking to add that extra flair to their streams or for players who just want a bit more sparkle in their game.
 
-red 
-green 
-blue 
-purple 
-white 
-pink 
-orange 
-cyan 
-yellow 
-gray 
-gold 
-teal 
-magenta 
-lime 
-olive 
-navy 
+Version 1.9 Compatibility: Fully updated for WoW patch 10.2.6.
 
- 
-
-Animations:
-
-9 different ring types
-
-4 different star types
-
-1 Starburst
-
-Alliance Icon
-
-Horde Icon 
-
-2 Swirls
-
-3 Butterflies (for the ladies, or whomever likes butterflies)
-
-
- Class Colors:
-Will be the color according to your class. First time using the addon it will be the color of your class. If you change the color in options it will remain that color unless you change it again. Class color only works on the first time using the addon. If you don't change the color, it will stay your class color.
-
- 
-
-You can now change the affect between 22 different animations. You can change colors. You can also change the min/max size of the effect as well as the Opacity. I have also added an option to enable/disable the addon.
+Elevate your gaming experience with CursorGlow - because even a cursor deserves to shine!
 
  
 
