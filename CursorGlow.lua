@@ -1,6 +1,23 @@
 -- CursorGlow
 -- Made by Sharpedge_Gaming
--- v1.7 - 10.2.5
+-- v1.9 - 10.2.6
+
+local LibStub = LibStub or _G.LibStub
+--local AceDB = LibStub("AceDB-3.0")
+local AceDB = LibStub:GetLibrary("AceDB-3.0")
+--local AceAddon = LibStub("AceAddon-3.0")
+local AceAddon = LibStub:GetLibrary("AceAddon-3.0")
+--local AceConfig = LibStub("AceConfig-3.0")
+local AceConfig = LibStub:GetLibrary("AceConfig-3.0")
+--local AceConfigDialog = LibStub("AceConfigDialog-3.0")
+local AceConfigDialog = LibStub:GetLibrary("AceConfigDialog-3.0")
+--local icon = LibStub("LibDBIcon-1.0")
+local icon = LibStub:GetLibrary("LibDBIcon-1.0")
+--local LDB = LibStub("LibDataBroker-1.1")
+local LDB = LibStub:GetLibrary("LibDataBroker-1.1")
+--local LSM = LibStub ("LibSharedMedia-3.0")
+local LSM = LibStub("LibSharedMedia-3.0")
+local AceGUI = LibStub("AceGUI-3.0")
 
 local AceConfig = LibStub("AceConfig-3.0")
 local AceConfigDialog = LibStub("AceConfigDialog-3.0")
