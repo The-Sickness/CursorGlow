@@ -1,6 +1,6 @@
 -- CursorGlow
 -- Made by Sharpedge_Gaming
--- v1.9 - 10.2.6
+-- v2.0 - 11.0.0
 
 local LibStub = LibStub or _G.LibStub
 --local AceDB = LibStub("AceDB-3.0")
@@ -371,16 +371,14 @@ frame:SetScript("OnEvent", function(self, event, ...)
     if event == "ADDON_LOADED" and ... == "CursorGlow" then
         UpdateTextureColor(CursorGlowCharacterSettings.color or GetDefaultClassColor())
         UpdateTexture(CursorGlowCharacterSettings.texture)
-        UpdateAddonVisibility() -- Ensure correct initial visibility
+        UpdateAddonVisibility() 
         
     elseif event == "PLAYER_REGEN_DISABLED" or event == "PLAYER_REGEN_ENABLED" then
-        UpdateAddonVisibility() -- Directly update visibility based on combat state
+        UpdateAddonVisibility() 
     elseif event == "ZONE_CHANGED_NEW_AREA" or event == "PLAYER_ENTERING_WORLD" then
-        -- Code to reapply the correct texture size or reset UI components
         UpdateTexture(CursorGlowCharacterSettings.texture)
         UpdateTextureColor(CursorGlowCharacterSettings.color)
         UpdateAddonVisibility()
-        -- Optionally reset the speed calculation if necessary
         speed = 0
     end
 end)
@@ -394,21 +392,17 @@ frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 
 -- OnUpdate function for the frame
 frame:SetScript("OnUpdate", function(self, elapsed)
-    -- Initialize texture size variable based on settings
     local size = math.max(CursorGlowCharacterSettings.minSize, CursorGlowCharacterSettings.maxSize)
 
     if CursorGlowCharacterSettings.operationMode == "enabledAlwaysOnCursor" then
-        -- For 'enabledAlwaysOnCursor', update cursor position and apply size from settings
         local scale = UIParent:GetEffectiveScale()
         local cursorX, cursorY = GetCursorPosition()
-        -- Set texture size according to the settings
         texture:SetHeight(size)
         texture:SetWidth(size)
-        -- Update texture position to follow the cursor
         texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cursorX / scale, cursorY / scale)
         texture:Show()
     else
-        -- Existing logic for dynamically adjusting texture size based on cursor speed
+
         CursorGlowCharacterSettings.maxSize = CursorGlowCharacterSettings.maxSize or 128
         CursorGlowCharacterSettings.minSize = CursorGlowCharacterSettings.minSize or 16
 
@@ -417,15 +411,17 @@ frame:SetScript("OnUpdate", function(self, elapsed)
         local dX, dY = x - prevX, y - prevY
 
         local distance = math.sqrt(dX * dX + dY * dY)
-        local decayFactor = 2048 ^ -elapsed
-        speed = math.min(decayFactor * speed + (1 - decayFactor) * distance / elapsed, 1024)
 
-        -- Adjust size dynamically for modes other than 'enabledAlwaysOnCursor'
-        size = math.max(math.min(speed / 6, CursorGlowCharacterSettings.maxSize), CursorGlowCharacterSettings.minSize)
-        local scale = UIParent:GetEffectiveScale()
-        texture:SetHeight(size)
-        texture:SetWidth(size)
-        texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", (x + 0.5 * dX) / scale, (y + 0.5 * dY) / scale)
+        if elapsed > 0 then
+            local decayFactor = 2048 ^ -elapsed
+            speed = math.min(decayFactor * speed + (1 - decayFactor) * distance / elapsed, 1024)
+
+            size = math.max(math.min(speed / 6, CursorGlowCharacterSettings.maxSize), CursorGlowCharacterSettings.minSize)
+            local scale = UIParent:GetEffectiveScale()
+            texture:SetHeight(size)
+            texture:SetWidth(size)
+            texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", (x + 0.5 * dX) / scale, (y + 0.5 * dY) / scale)
+        end
         
         if size > CursorGlowCharacterSettings.minSize then
             texture:Show()
@@ -434,13 +430,3 @@ frame:SetScript("OnUpdate", function(self, elapsed)
         end
     end
 end)
-
-
-
-
-
-
-
-
-
-
