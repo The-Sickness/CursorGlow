@@ -1,6 +1,6 @@
 -- CursorGlow
 -- Made by Sharpedge_Gaming
--- v2.2 - 11.0.2
+-- v2.3 - 11.0.2
 
 local LibStub = LibStub or _G.LibStub
 local AceDB = LibStub:GetLibrary("AceDB-3.0")
@@ -11,6 +11,8 @@ local LDB = LibStub:GetLibrary("LibDataBroker-1.1")
 local LSM = LibStub:GetLibrary("LibSharedMedia-3.0")
 local AceGUI = LibStub("AceGUI-3.0")
 local icon = LibStub("LibDBIcon-1.0")
+
+local CursorGlow = AceAddon:NewAddon("CursorGlow", "AceEvent-3.0", "AceConsole-3.0")
 
 -- Define texture options
 local textureOptions = {
@@ -149,18 +151,18 @@ end
 -- Function to update texture color and opacity
 local function UpdateTextureColor(color)
     local colorValue = colorOptions[color] or color
-    texture:SetVertexColor(colorValue[1], colorValue[2], colorValue[3], CursorGlowCharacterSettings.opacity)
+    texture:SetVertexColor(colorValue[1], colorValue[2], colorValue[3], CursorGlow.db.profile.opacity)
 end
 
 -- Function to update the texture
 local function UpdateTexture(textureKey)
     local texturePath = textureOptions[textureKey] or textureOptions["star4"]
     texture:SetTexture(texturePath)
-    UpdateTextureColor(CursorGlowCharacterSettings.color) 
+    UpdateTextureColor(CursorGlow.db.profile.color) 
 end
 
 local function ToggleAddon(enable)
-    if not CursorGlowCharacterSettings.combatOnly or UnitAffectingCombat("player") then
+    if not CursorGlow.db.profile.combatOnly or UnitAffectingCombat("player") then
         if enable then
             frame:Show()
         else
@@ -170,11 +172,11 @@ local function ToggleAddon(enable)
 end
 
 local function UpdateAddonVisibility()
-    if CursorGlowCharacterSettings.operationMode == "disabled" then
+    if CursorGlow.db.profile.operationMode == "disabled" then
         frame:Hide()
-    elseif CursorGlowCharacterSettings.operationMode == "enabledAlways" or CursorGlowCharacterSettings.operationMode == "enabledAlwaysOnCursor" then
+    elseif CursorGlow.db.profile.operationMode == "enabledAlways" or CursorGlow.db.profile.operationMode == "enabledAlwaysOnCursor" then
         frame:Show()
-    elseif CursorGlowCharacterSettings.operationMode == "enabledInCombat" then
+    elseif CursorGlow.db.profile.operationMode == "enabledInCombat" then
         if UnitAffectingCombat("player") then
             frame:Show()
         else
@@ -182,8 +184,6 @@ local function UpdateAddonVisibility()
         end
     end
 end
-
-local CursorGlow = AceAddon:NewAddon("CursorGlow", "AceEvent-3.0", "AceConsole-3.0")
 
 -- Initialize default settings with class color
 local defaultClassColor = GetDefaultClassColor() 
@@ -347,8 +347,8 @@ local minimapButton = LibStub("LibDataBroker-1.1"):NewDataObject("CursorGlow", {
                 InterfaceOptionsFrame_OpenToCategory("CursorGlow")
             end
         elseif button == "RightButton" then
-            CursorGlowCharacterSettings.enabled = not CursorGlowCharacterSettings.enabled
-            ToggleAddon(CursorGlowCharacterSettings.enabled)
+            CursorGlow.db.profile.enabled = not CursorGlow.db.profile.enabled
+            ToggleAddon(CursorGlow.db.profile.enabled)
         end
     end,
     OnTooltipShow = function(tooltip)
@@ -360,20 +360,15 @@ local minimapButton = LibStub("LibDataBroker-1.1"):NewDataObject("CursorGlow", {
 
 function CursorGlow:OnInitialize()
     self.db = AceDB:New("CursorGlowSettings", defaults, true)
-    CursorGlowCharacterSettings = self.db.profile
 
-    if not CursorGlowCharacterSettings.color or #CursorGlowCharacterSettings.color ~= 3 then
-        CursorGlowCharacterSettings.color = defaultClassColor
-    end
-
-    icon:Register("CursorGlow", minimapButton, CursorGlow.db.profile.minimap)
+    icon:Register("CursorGlow", minimapButton, self.db.profile.minimap)
 
     AceConfig:RegisterOptionsTable("CursorGlow", options)
     AceConfigDialog:AddToBlizOptions("CursorGlow", "CursorGlow")
 
     -- Initialize texture and color
-    UpdateTexture(CursorGlowCharacterSettings.texture)
-    UpdateTextureColor(CursorGlowCharacterSettings.color)
+    UpdateTexture(self.db.profile.texture)
+    UpdateTextureColor(self.db.profile.color)
 end
 
 -- Register combat events
@@ -382,34 +377,21 @@ frame:RegisterEvent("PLAYER_REGEN_ENABLED") -- Leaving combat
 
 -- Function to handle combat state changes
 local function HandleCombatState()
-    if CursorGlowCharacterSettings.combatOnly then
-        ToggleAddon(CursorGlowCharacterSettings.enabled)
+    if CursorGlow.db.profile.combatOnly then
+        ToggleAddon(CursorGlow.db.profile.enabled)
     end
 end
 
 frame:SetScript("OnEvent", function(self, event, ...)
     if event == "ADDON_LOADED" and ... == "CursorGlow" then
-        CursorGlowCharacterSettings = CursorGlowCharacterSettings or {
-            operationMode = "enabledAlways", -- Default mode
-            color = defaultClassColor,
-            opacity = 1,
-            minSize = 16,
-            maxSize = 128,
-            texture = "ring1",
-        }
-
-        if not CursorGlowCharacterSettings.color or #CursorGlowCharacterSettings.color ~= 3 then
-            CursorGlowCharacterSettings.color = defaultClassColor
-        end
-
-        UpdateTextureColor(CursorGlowCharacterSettings.color)
-        UpdateTexture(CursorGlowCharacterSettings.texture)
+        UpdateTexture(CursorGlow.db.profile.texture)
+        UpdateTextureColor(CursorGlow.db.profile.color)
         UpdateAddonVisibility() 
     elseif event == "PLAYER_REGEN_DISABLED" or event == "PLAYER_REGEN_ENABLED" then
         UpdateAddonVisibility() 
     elseif event == "ZONE_CHANGED_NEW_AREA" or event == "PLAYER_ENTERING_WORLD" then
-        UpdateTexture(CursorGlowCharacterSettings.texture)
-        UpdateTextureColor(CursorGlowCharacterSettings.color)
+        UpdateTexture(CursorGlow.db.profile.texture)
+        UpdateTextureColor(CursorGlow.db.profile.color)
         UpdateAddonVisibility()
         -- Optionally reset the speed calculation if necessary
         speed = 0
@@ -423,12 +405,11 @@ frame:RegisterEvent("PLAYER_REGEN_ENABLED")
 frame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 
--- OnUpdate function for the frame
 frame:SetScript("OnUpdate", function(self, elapsed)
     -- Initialize texture size variable based on settings
-    local size = math.max(CursorGlowCharacterSettings.minSize, CursorGlowCharacterSettings.maxSize)
+    local size = math.max(CursorGlow.db.profile.minSize, CursorGlow.db.profile.maxSize)
 
-    if CursorGlowCharacterSettings.operationMode == "enabledAlwaysOnCursor" then
+    if CursorGlow.db.profile.operationMode == "enabledAlwaysOnCursor" then
         local scale = UIParent:GetEffectiveScale()
         local cursorX, cursorY = GetCursorPosition()
         texture:SetHeight(size)
@@ -437,8 +418,8 @@ frame:SetScript("OnUpdate", function(self, elapsed)
         texture:Show()
     else
         -- Existing logic for dynamically adjusting texture size based on cursor speed
-        CursorGlowCharacterSettings.maxSize = CursorGlowCharacterSettings.maxSize or 128
-        CursorGlowCharacterSettings.minSize = CursorGlowCharacterSettings.minSize or 16
+        CursorGlow.db.profile.maxSize = CursorGlow.db.profile.maxSize or 128
+        CursorGlow.db.profile.minSize = CursorGlow.db.profile.minSize or 16
 
         local cursorX, cursorY = GetCursorPosition()
         
@@ -449,17 +430,23 @@ frame:SetScript("OnUpdate", function(self, elapsed)
         local dX, dY = cursorX - prevX, cursorY - prevY
 
         local distance = math.sqrt(dX * dX + dY * dY)
+        
+        -- Check if elapsed is zero to avoid division by zero
+        if elapsed == 0 then
+            elapsed = 0.0001 -- Set to a very small value to avoid zero division
+        end
+
         local decayFactor = 2048 ^ -elapsed
         speed = math.min(decayFactor * speed + (1 - decayFactor) * distance / elapsed, 1024)
 
         -- Adjust size dynamically for modes other than 'enabledAlwaysOnCursor'
-        size = math.max(math.min(speed / 6, CursorGlowCharacterSettings.maxSize), CursorGlowCharacterSettings.minSize)
+        size = math.max(math.min(speed / 6, CursorGlow.db.profile.maxSize), CursorGlow.db.profile.minSize)
         local scale = UIParent:GetEffectiveScale()
         texture:SetHeight(size)
         texture:SetWidth(size)
         texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", (cursorX + 0.5 * dX) / scale, (cursorY + 0.5 * dY) / scale)
         
-        if size > CursorGlowCharacterSettings.minSize then
+        if size > CursorGlow.db.profile.minSize then
             texture:Show()
         else
             texture:Hide()
