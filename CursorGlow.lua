@@ -1,78 +1,66 @@
 -- CursorGlow
 -- Made by Sharpedge_Gaming
--- v2.1 - 11.0.2
+-- v2.2 - 11.0.2
 
 local LibStub = LibStub or _G.LibStub
---local AceDB = LibStub("AceDB-3.0")
 local AceDB = LibStub:GetLibrary("AceDB-3.0")
---local AceAddon = LibStub("AceAddon-3.0")
 local AceAddon = LibStub:GetLibrary("AceAddon-3.0")
---local AceConfig = LibStub("AceConfig-3.0")
 local AceConfig = LibStub:GetLibrary("AceConfig-3.0")
---local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 local AceConfigDialog = LibStub:GetLibrary("AceConfigDialog-3.0")
---local icon = LibStub("LibDBIcon-1.0")
-local icon = LibStub:GetLibrary("LibDBIcon-1.0")
---local LDB = LibStub("LibDataBroker-1.1")
 local LDB = LibStub:GetLibrary("LibDataBroker-1.1")
---local LSM = LibStub ("LibSharedMedia-3.0")
-local LSM = LibStub("LibSharedMedia-3.0")
+local LSM = LibStub:GetLibrary("LibSharedMedia-3.0")
 local AceGUI = LibStub("AceGUI-3.0")
-
-local AceConfig = LibStub("AceConfig-3.0")
-local AceConfigDialog = LibStub("AceConfigDialog-3.0")
+local icon = LibStub("LibDBIcon-1.0")
 
 -- Define texture options
-local textureOptions = {   
-	["ring1"] = "Interface\\Addons\\CursorGlow\\Textures\\Test2.png",
-	["ring2"] = "Interface\\Addons\\CursorGlow\\Textures\\Test3.png",
-	["ring3"] = "Interface\\Addons\\CursorGlow\\Textures\\Test4.png",
-	["ring4"] = "Interface\\Addons\\CursorGlow\\Textures\\Test6.png",
-	["ring5"] = "Interface\\Addons\\CursorGlow\\Textures\\Test5.png",
-	["ring6"] = "Interface\\Addons\\CursorGlow\\Textures\\Test8.png",
-	["ring7"] = "Interface\\Addons\\CursorGlow\\Textures\\Test7.png",
-	["ring8"] = "Interface\\Addons\\CursorGlow\\Textures\\Test9.png",
-	["ring9"] = "Interface\\Addons\\CursorGlow\\Textures\\Test10.png",
-	["ring10"] = "Interface\\Addons\\CursorGlow\\Textures\\Test11.png",
-	["ring11"] = "Interface\\Addons\\CursorGlow\\Textures\\Star1.png",
-	["ring12"] = "Interface\\Addons\\CursorGlow\\Textures\\Star2.png",
-	["ring13"] = "Interface\\Addons\\CursorGlow\\Textures\\Star3.png",
-	["ring14"] = "Interface\\Cooldown\\star4",
+local textureOptions = {
+    ["ring1"] = "Interface\\Addons\\CursorGlow\\Textures\\Test2.png",
+    ["ring2"] = "Interface\\Addons\\CursorGlow\\Textures\\Test3.png",
+    ["ring3"] = "Interface\\Addons\\CursorGlow\\Textures\\Test4.png",
+    ["ring4"] = "Interface\\Addons\\CursorGlow\\Textures\\Test6.png",
+    ["ring5"] = "Interface\\Addons\\CursorGlow\\Textures\\Test5.png",
+    ["ring6"] = "Interface\\Addons\\CursorGlow\\Textures\\Test8.png",
+    ["ring7"] = "Interface\\Addons\\CursorGlow\\Textures\\Test7.png",
+    ["ring8"] = "Interface\\Addons\\CursorGlow\\Textures\\Test9.png",
+    ["ring9"] = "Interface\\Addons\\CursorGlow\\Textures\\Test10.png",
+    ["ring10"] = "Interface\\Addons\\CursorGlow\\Textures\\Test11.png",
+    ["ring11"] = "Interface\\Addons\\CursorGlow\\Textures\\Star1.png",
+    ["ring12"] = "Interface\\Addons\\CursorGlow\\Textures\\Star2.png",
+    ["ring13"] = "Interface\\Addons\\CursorGlow\\Textures\\Star3.png",
+    ["ring14"] = "Interface\\Cooldown\\star4",
     ["ring15"] = "Interface\\Cooldown\\starburst",
-	["ring16"] = "Interface\\Addons\\CursorGlow\\Textures\\Test12.png",
-	["ring17"] = "Interface\\Addons\\CursorGlow\\Textures\\Test13.png",
-	["ring18"] = "Interface\\Addons\\CursorGlow\\Textures\\Test14.png",
-	["ring19"] = "Interface\\Addons\\CursorGlow\\Textures\\Test15.png",
-	["ring20"] = "Interface\\Addons\\CursorGlow\\Textures\\Test16.png",
-	["ring21"] = "Interface\\Addons\\CursorGlow\\Textures\\Test17.png",
-	["ring22"] = "Interface\\Addons\\CursorGlow\\Textures\\Test18.png",
-	
-		
+    ["ring16"] = "Interface\\Addons\\CursorGlow\\Textures\\Test12.png",
+    ["ring17"] = "Interface\\Addons\\CursorGlow\\Textures\\Test13.png",
+    ["ring18"] = "Interface\\Addons\\CursorGlow\\Textures\\Test14.png",
+    ["ring19"] = "Interface\\Addons\\CursorGlow\\Textures\\Test15.png",
+    ["ring20"] = "Interface\\Addons\\CursorGlow\\Textures\\Test16.png",
+    ["ring21"] = "Interface\\Addons\\CursorGlow\\Textures\\Test17.png",
+    ["ring22"] = "Interface\\Addons\\CursorGlow\\Textures\\Test18.png",
 }
 
 local orderedKeys = {
     "ring1", 
-	"ring2", 
-	"ring3", 
-	"ring4", 
-	"ring5",
+    "ring2", 
+    "ring3", 
+    "ring4", 
+    "ring5",
     "ring6", 
-	"ring7", 
-	"ring8", 
-	"ring9", 
-	"ring10",
+    "ring7", 
+    "ring8", 
+    "ring9", 
+    "ring10",
     "ring11", 
-	"ring12", 
-	"ring13", 
-	"ring14",
-	"ring15",
-	"ring16",
-	"ring17",
-	"ring18",
-	"ring19",
-	"ring20",
-	"ring21",
-	"ring22",
+    "ring12", 
+    "ring13", 
+    "ring14",
+    "ring15",
+    "ring16",
+    "ring17",
+    "ring18",
+    "ring19",
+    "ring20",
+    "ring21",
+    "ring22",
 }
 
 local displayNames = {
@@ -86,20 +74,20 @@ local displayNames = {
     ring8 = 'Ring 8',
     ring9 = 'Ring 9',
     ring10 = 'Star 1',
-	ring11 = 'Star 2',
+    ring11 = 'Star 2',
     ring12 = 'Star 3',
     ring13 = 'Star 4',
     ring14 = 'Star 5',
     ring15 = 'Starburst',
-	ring16 = 'Butterfly',
-	ring17 = 'Butterfly2',
-	ring18 = 'Butterfly3',
-	ring19 = 'Swirl',
-	ring20 = 'Swirl2',
-	ring21 = 'Horde',
-	ring22 = 'Alliance',
+    ring16 = 'Butterfly',
+    ring17 = 'Butterfly2',
+    ring18 = 'Butterfly3',
+    ring19 = 'Swirl',
+    ring20 = 'Swirl2',
+    ring21 = 'Horde',
+    ring22 = 'Alliance',
 }
--- Build the values table dynamically
+
 local values = {}
 for _, key in ipairs(orderedKeys) do
     values[key] = displayNames[key]
@@ -109,9 +97,9 @@ end
 local frame = CreateFrame("Frame", nil, UIParent)
 frame:SetFrameStrata("TOOLTIP")
 local texture = frame:CreateTexture()
-texture:SetTexture(textureOptions["star4"])  -- Default texture
+texture:SetTexture(textureOptions["star4"])  
 texture:SetBlendMode("ADD")
-texture:SetSize(32, 32)  -- Set initial size for the main texture
+texture:SetSize(32, 32) 
 
 -- Define color options
 local colorOptions = {
@@ -136,7 +124,7 @@ local colorOptions = {
     paladin = {0.96, 0.55, 0.73},
     hunter = {0.67, 0.83, 0.45},
     rogue = {1.00, 0.96, 0.41},
-	priest = {1.00, 1.00, 1.00},
+    priest = {1.00, 1.00, 1.00},
     deathknight = {0.77, 0.12, 0.23},
     shaman = {0.00, 0.44, 0.87},
     mage = {0.41, 0.80, 0.94},
@@ -152,49 +140,15 @@ local function GetDefaultClassColor()
     if class then
         local classColor = RAID_CLASS_COLORS[class]
         if classColor then
-            -- Convert to format used in colorOptions
             return {classColor.r, classColor.g, classColor.b}
         end
     end
     return colorOptions["red"]  -- Fallback color if class color is unavailable
 end
 
--- Initialize default settings with class color
-local defaultClassColor = GetDefaultClassColor() 
-CursorGlowCharacterSettings = CursorGlowCharacterSettings or {
-    operationMode = "enabledAlways", -- Default mode
-    color = defaultClassColor,
-    opacity = 0.5,
-    minSize = 16,
-    maxSize = 128,
-    texture = "star4"
-}
-
-local function ToggleAddon(enable)
-    -- Only change visibility if not restricted to combat or if in combat
-    if not CursorGlowCharacterSettings.combatOnly or UnitAffectingCombat("player") then
-        if enable then
-            frame:Show()
-        else
-            frame:Hide()
-        end
-    end
-end
-
--- Function to handle combat state changes
-local function HandleCombatState()
-    if CursorGlowCharacterSettings.combatOnly then
-        ToggleAddon(CursorGlowCharacterSettings.enabled)
-    end
-end
-
--- Register combat events
-frame:RegisterEvent("PLAYER_REGEN_DISABLED") -- Entering combat
-frame:RegisterEvent("PLAYER_REGEN_ENABLED") -- Leaving combat
-
 -- Function to update texture color and opacity
 local function UpdateTextureColor(color)
-    local colorValue = colorOptions[color] or colorOptions["red"]
+    local colorValue = colorOptions[color] or color
     texture:SetVertexColor(colorValue[1], colorValue[2], colorValue[3], CursorGlowCharacterSettings.opacity)
 end
 
@@ -202,15 +156,16 @@ end
 local function UpdateTexture(textureKey)
     local texturePath = textureOptions[textureKey] or textureOptions["star4"]
     texture:SetTexture(texturePath)
-    UpdateTextureColor(CursorGlowCharacterSettings.color) -- Update color to refresh the texture
+    UpdateTextureColor(CursorGlowCharacterSettings.color) 
 end
 
--- Function to toggle the addon's functionality
 local function ToggleAddon(enable)
-    if enable then
-        frame:Show()
-    else
-        frame:Hide()
+    if not CursorGlowCharacterSettings.combatOnly or UnitAffectingCombat("player") then
+        if enable then
+            frame:Show()
+        else
+            frame:Hide()
+        end
     end
 end
 
@@ -228,8 +183,26 @@ local function UpdateAddonVisibility()
     end
 end
 
+local CursorGlow = AceAddon:NewAddon("CursorGlow", "AceEvent-3.0", "AceConsole-3.0")
 
+-- Initialize default settings with class color
+local defaultClassColor = GetDefaultClassColor() 
 
+local defaults = {
+    profile = {
+        operationMode = "enabledAlways", -- Default mode
+        color = defaultClassColor,
+        opacity = 1,
+        minSize = 16,
+        maxSize = 175,
+        texture = "ring1",
+        minimap = {
+            hide = false,
+        },
+    }
+}
+
+-- Define options table before using it
 local options = {
     name = "CursorGlow",
     type = 'group',
@@ -247,13 +220,13 @@ local options = {
                     values = {
                         enabledAlways = 'Enabled Always',
                         enabledInCombat = 'Enabled in Combat Only',
-						enabledAlwaysOnCursor = 'Always Show on Cursor',
+                        enabledAlwaysOnCursor = 'Always Show on Cursor',
                     },
-                    get = function() return CursorGlowCharacterSettings.operationMode end,
-    set = function(_, val)
-        CursorGlowCharacterSettings.operationMode = val
-        UpdateAddonVisibility()
-    end,
+                    get = function() return CursorGlow.db.profile.operationMode end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.operationMode = val
+                        UpdateAddonVisibility()
+                    end,
                 },
             },
         },
@@ -268,9 +241,9 @@ local options = {
                     desc = 'Select the texture for the cursor glow',
                     order = 1,
                     values = values, 
-                    get = function() return CursorGlowCharacterSettings.texture end,
+                    get = function() return CursorGlow.db.profile.texture end,
                     set = function(_, val)
-                        CursorGlowCharacterSettings.texture = val
+                        CursorGlow.db.profile.texture = val
                         UpdateTexture(val)
                     end,
                 },
@@ -309,9 +282,9 @@ local options = {
                         druid = 'Druid',
                         demonhunter = 'Demon Hunter',
                     },
-                    get = function() return CursorGlowCharacterSettings.color end,
+                    get = function() return CursorGlow.db.profile.color end,
                     set = function(_, val)
-                        CursorGlowCharacterSettings.color = val
+                        CursorGlow.db.profile.color = val
                         UpdateTextureColor(val)
                     end,
                 },
@@ -323,10 +296,10 @@ local options = {
                     min = 0,
                     max = 1,
                     step = 0.01,
-                    get = function() return CursorGlowCharacterSettings.opacity end,
+                    get = function() return CursorGlow.db.profile.opacity end,
                     set = function(_, val)
-                        CursorGlowCharacterSettings.opacity = val
-                        UpdateTextureColor(CursorGlowCharacterSettings.color)
+                        CursorGlow.db.profile.opacity = val
+                        UpdateTextureColor(CursorGlow.db.profile.color)
                     end,
                 },
                 minSize = {
@@ -337,9 +310,9 @@ local options = {
                     min = 16,
                     max = 64,
                     step = 1,
-                    get = function() return CursorGlowCharacterSettings.minSize end,
+                    get = function() return CursorGlow.db.profile.minSize end,
                     set = function(_, val)
-                        CursorGlowCharacterSettings.minSize = val
+                        CursorGlow.db.profile.minSize = val
                     end,
                 },
                 maxSize = {
@@ -350,9 +323,9 @@ local options = {
                     min = 20,
                     max = 256,
                     step = 1,
-                    get = function() return CursorGlowCharacterSettings.maxSize end,
+                    get = function() return CursorGlow.db.profile.maxSize end,
                     set = function(_, val)
-                        CursorGlowCharacterSettings.maxSize = val
+                        CursorGlow.db.profile.maxSize = val
                     end,
                 },
             },
@@ -360,25 +333,85 @@ local options = {
     },
 }
 
--- Register options table and add to interface options
-AceConfig:RegisterOptionsTable("CursorGlow", options)
-AceConfigDialog:AddToBlizOptions("CursorGlow", "CursorGlow")
+-- Minimap button creation
+local minimapButton = LibStub("LibDataBroker-1.1"):NewDataObject("CursorGlow", {
+    type = "data source",
+    text = "CursorGlow",
+    icon = "Interface\\Icons\\Spell_Frost_Frost",
+    OnClick = function(self, button)
+        if button == "LeftButton" then
+            if Settings and Settings.OpenToCategory then
+                Settings.OpenToCategory("CursorGlow")
+            else
+                InterfaceOptionsFrame_OpenToCategory("CursorGlow")
+                InterfaceOptionsFrame_OpenToCategory("CursorGlow")
+            end
+        elseif button == "RightButton" then
+            CursorGlowCharacterSettings.enabled = not CursorGlowCharacterSettings.enabled
+            ToggleAddon(CursorGlowCharacterSettings.enabled)
+        end
+    end,
+    OnTooltipShow = function(tooltip)
+        tooltip:AddLine("|cFF00FF00CursorGlow|r")  
+        tooltip:AddLine("|cFFFFFFFFLeft-click to open settings.|r")  
+        tooltip:AddLine("|cFFFFFFFFRight-click to toggle addon.|r")  
+    end,
+})
 
--- Variables for cursor tracking
-local x, y, speed = 0, 0, 0
+function CursorGlow:OnInitialize()
+    self.db = AceDB:New("CursorGlowSettings", defaults, true)
+    CursorGlowCharacterSettings = self.db.profile
+
+    if not CursorGlowCharacterSettings.color or #CursorGlowCharacterSettings.color ~= 3 then
+        CursorGlowCharacterSettings.color = defaultClassColor
+    end
+
+    icon:Register("CursorGlow", minimapButton, CursorGlow.db.profile.minimap)
+
+    AceConfig:RegisterOptionsTable("CursorGlow", options)
+    AceConfigDialog:AddToBlizOptions("CursorGlow", "CursorGlow")
+
+    -- Initialize texture and color
+    UpdateTexture(CursorGlowCharacterSettings.texture)
+    UpdateTextureColor(CursorGlowCharacterSettings.color)
+end
+
+-- Register combat events
+frame:RegisterEvent("PLAYER_REGEN_DISABLED") -- Entering combat
+frame:RegisterEvent("PLAYER_REGEN_ENABLED") -- Leaving combat
+
+-- Function to handle combat state changes
+local function HandleCombatState()
+    if CursorGlowCharacterSettings.combatOnly then
+        ToggleAddon(CursorGlowCharacterSettings.enabled)
+    end
+end
 
 frame:SetScript("OnEvent", function(self, event, ...)
     if event == "ADDON_LOADED" and ... == "CursorGlow" then
-        UpdateTextureColor(CursorGlowCharacterSettings.color or GetDefaultClassColor())
+        CursorGlowCharacterSettings = CursorGlowCharacterSettings or {
+            operationMode = "enabledAlways", -- Default mode
+            color = defaultClassColor,
+            opacity = 1,
+            minSize = 16,
+            maxSize = 128,
+            texture = "ring1",
+        }
+
+        if not CursorGlowCharacterSettings.color or #CursorGlowCharacterSettings.color ~= 3 then
+            CursorGlowCharacterSettings.color = defaultClassColor
+        end
+
+        UpdateTextureColor(CursorGlowCharacterSettings.color)
         UpdateTexture(CursorGlowCharacterSettings.texture)
         UpdateAddonVisibility() 
-        
     elseif event == "PLAYER_REGEN_DISABLED" or event == "PLAYER_REGEN_ENABLED" then
         UpdateAddonVisibility() 
     elseif event == "ZONE_CHANGED_NEW_AREA" or event == "PLAYER_ENTERING_WORLD" then
         UpdateTexture(CursorGlowCharacterSettings.texture)
         UpdateTextureColor(CursorGlowCharacterSettings.color)
         UpdateAddonVisibility()
+        -- Optionally reset the speed calculation if necessary
         speed = 0
     end
 end)
@@ -392,6 +425,7 @@ frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 
 -- OnUpdate function for the frame
 frame:SetScript("OnUpdate", function(self, elapsed)
+    -- Initialize texture size variable based on settings
     local size = math.max(CursorGlowCharacterSettings.minSize, CursorGlowCharacterSettings.maxSize)
 
     if CursorGlowCharacterSettings.operationMode == "enabledAlwaysOnCursor" then
@@ -402,31 +436,37 @@ frame:SetScript("OnUpdate", function(self, elapsed)
         texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cursorX / scale, cursorY / scale)
         texture:Show()
     else
-
+        -- Existing logic for dynamically adjusting texture size based on cursor speed
         CursorGlowCharacterSettings.maxSize = CursorGlowCharacterSettings.maxSize or 128
         CursorGlowCharacterSettings.minSize = CursorGlowCharacterSettings.minSize or 16
 
-        local prevX, prevY = x, y
-        x, y = GetCursorPosition()
-        local dX, dY = x - prevX, y - prevY
+        local cursorX, cursorY = GetCursorPosition()
+        
+        -- Initialize prevX and prevY if they are nil
+        prevX = prevX or cursorX
+        prevY = prevY or cursorY
+
+        local dX, dY = cursorX - prevX, cursorY - prevY
 
         local distance = math.sqrt(dX * dX + dY * dY)
+        local decayFactor = 2048 ^ -elapsed
+        speed = math.min(decayFactor * speed + (1 - decayFactor) * distance / elapsed, 1024)
 
-        if elapsed > 0 then
-            local decayFactor = 2048 ^ -elapsed
-            speed = math.min(decayFactor * speed + (1 - decayFactor) * distance / elapsed, 1024)
-
-            size = math.max(math.min(speed / 6, CursorGlowCharacterSettings.maxSize), CursorGlowCharacterSettings.minSize)
-            local scale = UIParent:GetEffectiveScale()
-            texture:SetHeight(size)
-            texture:SetWidth(size)
-            texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", (x + 0.5 * dX) / scale, (y + 0.5 * dY) / scale)
-        end
+        -- Adjust size dynamically for modes other than 'enabledAlwaysOnCursor'
+        size = math.max(math.min(speed / 6, CursorGlowCharacterSettings.maxSize), CursorGlowCharacterSettings.minSize)
+        local scale = UIParent:GetEffectiveScale()
+        texture:SetHeight(size)
+        texture:SetWidth(size)
+        texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", (cursorX + 0.5 * dX) / scale, (cursorY + 0.5 * dY) / scale)
         
         if size > CursorGlowCharacterSettings.minSize then
             texture:Show()
         else
             texture:Hide()
         end
+
+        -- Update prevX and prevY for the next OnUpdate call
+        prevX = cursorX
+        prevY = cursorY
     end
 end)
