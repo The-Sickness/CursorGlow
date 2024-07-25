@@ -1,6 +1,6 @@
 -- CursorGlow
 -- Made by Sharpedge_Gaming
--- v2.3 - 11.0.2
+-- v2.4 - 11.0.2
 
 local LibStub = LibStub or _G.LibStub
 local AceDB = LibStub:GetLibrary("AceDB-3.0")
