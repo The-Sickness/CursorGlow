@@ -1,6 +1,6 @@
 -- CursorGlow
 -- Made by Sharpedge_Gaming
--- v2.4 - 11.0.2
+-- v2.5 - 11.0.2
 
 local LibStub = LibStub or _G.LibStub
 local AceDB = LibStub:GetLibrary("AceDB-3.0")
@@ -359,7 +359,7 @@ local minimapButton = LibStub("LibDataBroker-1.1"):NewDataObject("CursorGlow", {
 })
 
 function CursorGlow:OnInitialize()
-    self.db = AceDB:New("CursorGlowSettings", defaults, true)
+    self.db = AceDB:New("CursorGlowCharacterSettings", defaults, true)
 
     icon:Register("CursorGlow", minimapButton, self.db.profile.minimap)
 
