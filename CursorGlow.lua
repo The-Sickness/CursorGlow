@@ -193,16 +193,17 @@ local defaultClassColor = GetDefaultClassColor()
 local defaults = {
     profile = {
         operationMode = "enabledAlways", -- Default mode
-        color = {1, 1, 1}, -- Default to white
-        opacity = 1,
-        minSize = 16,
-        maxSize = 175,
-        texture = "ring1",
+        color = defaultClassColor,       -- Default to class color
+        opacity = 1,                     -- Default opacity
+        minSize = 16,                    -- Default minimum size
+        maxSize = 175,                   -- Default maximum size
+        texture = "ring1",               -- Default texture
         minimap = {
-            hide = false,
+            hide = false,                -- Minimap icon visibility
         },
     }
 }
+
 
 -- Create a DataBroker object for the minimap button
 local minimapButton = LDB:NewDataObject("CursorGlow", {
@@ -241,6 +242,7 @@ function CursorGlow:OnInitialize()
     self.db.RegisterCallback(self, "OnProfileCopied", "ApplySettings")
     self.db.RegisterCallback(self, "OnProfileReset", "ApplySettings")
 
+    -- Ensure the color is set correctly
     if self.db.profile.color[1] == 1 and self.db.profile.color[2] == 1 and self.db.profile.color[3] == 1 then
         local classColor = GetDefaultClassColor()
         self.db.profile.color = classColor
@@ -252,6 +254,7 @@ function CursorGlow:OnInitialize()
         print("Error: Minimap button or LibDBIcon not properly initialized.")
     end
 
+    -- Show or hide the minimap button based on the saved setting
     if self.db.profile.minimap.hide then
         icon:Hide("CursorGlow")
     else
@@ -407,14 +410,17 @@ function CursorGlow:OnInitialize()
     AceConfig:RegisterOptionsTable("CursorGlow", options)
     AceConfigDialog:AddToBlizOptions("CursorGlow", "CursorGlow")
 
+    -- Apply the settings for the current profile
     self:ApplySettings()
 end
 
 function CursorGlow:ApplySettings()
+    -- Ensure the texture and color are applied based on the current profile
     UpdateTexture(self.db.profile.texture)
     UpdateTextureColor(self.db.profile.color)
     UpdateAddonVisibility()
 end
+
 
 frame:RegisterEvent("PLAYER_REGEN_DISABLED")
 frame:RegisterEvent("PLAYER_REGEN_ENABLED")
