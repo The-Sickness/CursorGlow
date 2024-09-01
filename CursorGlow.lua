@@ -135,7 +135,8 @@ local colorOptions = {
     warlock = {0.58, 0.51, 0.79},
     monk = {0.00, 1.00, 0.59},
     druid = {1.00, 0.49, 0.04},
-    demonhunter = {0.64, 0.19, 0.79}
+    demonhunter = {0.64, 0.19, 0.79},
+    evoker = {0.20, 0.58, 0.50}
 }
 
 -- Function to get the default class color
@@ -355,6 +356,7 @@ function CursorGlow:OnInitialize()
                         monk = L["Monk"],
                         druid = L["Druid"],
                         demonhunter = L["Demon Hunter"],
+                        evoker = L["Evoker"],
                     },
                     get = function() return CursorGlow.db.profile.color end,
                     set = function(_, val)
