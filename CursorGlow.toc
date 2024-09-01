@@ -31,5 +31,7 @@ libs\AceGUI-3.0-SharedMediaWidgets\widget.xml
 #@end-no-lib-strip@
 
 Locale/enUS.lua
+Locale/zhTW.lua
+Locale/zhCN.lua
 CursorGlow.lua
 
