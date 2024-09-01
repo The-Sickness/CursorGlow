@@ -2,7 +2,7 @@
 ## Title: CursorGlow
 ## Notes: Makes it easy to keep track of where your cursor is located.
 ## Author: SharpeEdge-Gaming
-## Version: 2.7
+## Version: 2.8
 ## DefaultState: enabled
 ## IconTexture: 237545
 ## SavedVariables: CursorGlowDB
@@ -25,9 +25,11 @@ libs\AceConfigDialog-3.0\AceConfigDialog-3.0.lua
 libs\AceConfigRegistry-3.0\AceConfigRegistry-3.0.lua
 libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
 libs\LibDBIcon-1.0\LibDBIcon-1.0.lua
+libs\AceLocale-3.0\AceLocale-3.0.lua
 libs\LibSharedMedia-3.0\lib.xml
 libs\AceGUI-3.0-SharedMediaWidgets\widget.xml
 #@end-no-lib-strip@
 
+Locale/enUS.lua
 CursorGlow.lua
 
