@@ -1,6 +1,6 @@
 -- CursorGlow
 -- Made by Sharpedge_Gaming
--- v2.7 - 11.0.2
+-- v2.8 - 11.0.2
 
 local LibStub = LibStub or _G.LibStub
 local AceDB = LibStub:GetLibrary("AceDB-3.0")
@@ -12,6 +12,7 @@ local LDB = LibStub:GetLibrary("LibDataBroker-1.1")
 local LSM = LibStub:GetLibrary("LibSharedMedia-3.0")
 local AceGUI = LibStub:GetLibrary("AceGUI-3.0")
 local icon = LibStub("LibDBIcon-1.0")
+local L = LibStub("AceLocale-3.0"):GetLocale("CursorGlow", true)
 
 local CursorGlow = AceAddon:NewAddon("CursorGlow", "AceEvent-3.0", "AceConsole-3.0")
 
@@ -262,150 +263,150 @@ function CursorGlow:OnInitialize()
     end
 
     local options = {
-        name = "CursorGlow",
-        type = 'group',
-        args = {
-            general = {
-                type = 'group',
-                name = 'General',
-                order = 1,
-                args = {
-                    operationMode = {
-                        type = 'select',
-                        name = 'Operation Mode',
-                        desc = 'Select when the addon should be active',
-                        order = 1,
-                        values = {
-                            enabledAlways = 'Enabled Always',
-                            enabledInCombat = 'Enabled in Combat Only',
-                            enabledAlwaysOnCursor = 'Always Show on Cursor',
-                        },
-                        get = function() return CursorGlow.db.profile.operationMode end,
-                        set = function(_, val)
-                            CursorGlow.db.profile.operationMode = val
-                            UpdateAddonVisibility()
-                        end,
+    name = "CursorGlow",
+    type = 'group',
+    args = {
+        general = {
+            type = 'group',
+            name = L["General"],
+            order = 1,
+            args = {
+                operationMode = {
+                    type = 'select',
+                    name = L["Operation Mode"],
+                    desc = L["Select when the addon should be active"],
+                    order = 1,
+                    values = {
+                        enabledAlways = L["Enabled Always"],
+                        enabledInCombat = L["Enabled in Combat Only"],
+                        enabledAlwaysOnCursor = L["Always Show on Cursor"],
                     },
-                    showMinimapIcon = {
-                        type = 'toggle',
-                        name = 'Show Minimap Icon',
-                        desc = 'Show or hide the minimap icon',
-                        order = 2,
-                        get = function() return not CursorGlow.db.profile.minimap.hide end,
-                        set = function(_, val)
-                            CursorGlow.db.profile.minimap.hide = not val
-                            if val then
-                                icon:Show("CursorGlow")
-                            else
-                                icon:Hide("CursorGlow")
-                            end
-                        end,
-                    },
+                    get = function() return CursorGlow.db.profile.operationMode end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.operationMode = val
+                        UpdateAddonVisibility()
+                    end,
+                },
+                showMinimapIcon = {
+                    type = 'toggle',
+                    name = L["Show Minimap Icon"],
+                    desc = L["Show or hide the minimap icon"],
+                    order = 2,
+                    get = function() return not CursorGlow.db.profile.minimap.hide end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.minimap.hide = not val
+                        if val then
+                            icon:Show("CursorGlow")
+                        else
+                            icon:Hide("CursorGlow")
+                        end
+                    end,
                 },
             },
-            appearance = {
-                type = 'group',
-                name = 'Appearance',
-                order = 2,
-                args = {
-                    texture = {
-                        type = 'select',
-                        name = 'Texture',
-                        desc = 'Select the texture for the cursor glow',
-                        order = 1,
-                        values = values, 
-                        get = function() return CursorGlow.db.profile.texture end,
-                        set = function(_, val)
-                            CursorGlow.db.profile.texture = val
-                            UpdateTexture(val)
-                        end,
-                    },
-                    color = {
-                        type = 'select',
-                        name = 'Color',
-                        desc = 'Select the color for the texture',
-                        order = 2,
-                        values = {
-                            red = 'Red',
-                            green = 'Green',
-                            blue = 'Blue',
-                            purple = 'Purple',
-                            white = 'White',
-                            pink = 'Pink',
-                            orange = 'Orange',
-                            cyan = 'Cyan',
-                            yellow = 'Yellow',
-                            gray = 'Gray',
-                            gold = 'Gold',
-                            teal = 'Teal',
-                            magenta = 'Magenta',
-                            lime = 'Lime',
-                            olive = 'Olive',
-                            navy = 'Navy',
-                            warrior = 'Warrior',
-                            paladin = 'Paladin',
-                            hunter = 'Hunter',
-                            rogue = 'Rogue',
-                            priest = 'Priest',
-                            deathknight = 'Death Knight',
-                            shaman = 'Shaman',
-                            mage = 'Mage',
-                            warlock = 'Warlock',
-                            monk = 'Monk',
-                            druid = 'Druid',
-                            demonhunter = 'Demon Hunter',
-                        },
-                        get = function() return CursorGlow.db.profile.color end,
-                        set = function(_, val)
-                            CursorGlow.db.profile.color = val
-                            UpdateTextureColor(val)
-                        end,
-                    },
-                    opacity = {
-                        type = 'range',
-                        name = 'Opacity',
-                        desc = 'Adjust the opacity of the texture',
-                        order = 3,
-                        min = 0,
-                        max = 1,
-                        step = 0.01,
-                        get = function() return CursorGlow.db.profile.opacity end,
-                        set = function(_, val)
-                            CursorGlow.db.profile.opacity = val
-                            UpdateTextureColor(CursorGlow.db.profile.color)
-                        end,
-                    },
-                    minSize = {
-                        type = 'range',
-                        name = 'Minimum Size',
-                        desc = 'Set the minimum size of the texture',
-                        order = 4,
-                        min = 16,
-                        max = 64,
-                        step = 1,
-                        get = function() return CursorGlow.db.profile.minSize end,
-                        set = function(_, val)
-                            CursorGlow.db.profile.minSize = val
-                        end,
-                    },
-                    maxSize = {
-                        type = 'range',
-                        name = 'Maximum Size',
-                        desc = 'Set the maximum size of the texture',
-                        order = 5,
-                        min = 20,
-                        max = 256,
-                        step = 1,
-                        get = function() return CursorGlow.db.profile.maxSize end,
-                        set = function(_, val)
-                            CursorGlow.db.profile.maxSize = val
-                        end,
-                    },
-                },
-            },
-            profiles = AceDBOptions:GetOptionsTable(self.db),
         },
-    }
+        appearance = {
+            type = 'group',
+            name = L["Appearance"],
+            order = 2,
+            args = {
+                texture = {
+                    type = 'select',
+                    name = L["Texture"],
+                    desc = L["Select the texture for the cursor glow"],
+                    order = 1,
+                    values = values, 
+                    get = function() return CursorGlow.db.profile.texture end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.texture = val
+                        UpdateTexture(val)
+                    end,
+                },
+                color = {
+                    type = 'select',
+                    name = L["Color"],
+                    desc = L["Select the color for the texture"],
+                    order = 2,
+                    values = {
+                        red = L["Red"],
+                        green = L["Green"],
+                        blue = L["Blue"],
+                        purple = L["Purple"],
+                        white = L["White"],
+                        pink = L["Pink"],
+                        orange = L["Orange"],
+                        cyan = L["Cyan"],
+                        yellow = L["Yellow"],
+                        gray = L["Gray"],
+                        gold = L["Gold"],
+                        teal = L["Teal"],
+                        magenta = L["Magenta"],
+                        lime = L["Lime"],
+                        olive = L["Olive"],
+                        navy = L["Navy"],
+                        warrior = L["Warrior"],
+                        paladin = L["Paladin"],
+                        hunter = L["Hunter"],
+                        rogue = L["Rogue"],
+                        priest = L["Priest"],
+                        deathknight = L["Death Knight"],
+                        shaman = L["Shaman"],
+                        mage = L["Mage"],
+                        warlock = L["Warlock"],
+                        monk = L["Monk"],
+                        druid = L["Druid"],
+                        demonhunter = L["Demon Hunter"],
+                    },
+                    get = function() return CursorGlow.db.profile.color end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.color = val
+                        UpdateTextureColor(val)
+                    end,
+                },
+                opacity = {
+                    type = 'range',
+                    name = L["Opacity"],
+                    desc = L["Adjust the opacity of the texture"],
+                    order = 3,
+                    min = 0,
+                    max = 1,
+                    step = 0.01,
+                    get = function() return CursorGlow.db.profile.opacity end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.opacity = val
+                        UpdateTextureColor(CursorGlow.db.profile.color)
+                    end,
+                },
+                minSize = {
+                    type = 'range',
+                    name = L["Minimum Size"],
+                    desc = L["Set the minimum size of the texture"],
+                    order = 4,
+                    min = 16,
+                    max = 64,
+                    step = 1,
+                    get = function() return CursorGlow.db.profile.minSize end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.minSize = val
+                    end,
+                },
+                maxSize = {
+                    type = 'range',
+                    name = L["Maximum Size"],
+                    desc = L["Set the maximum size of the texture"],
+                    order = 5,
+                    min = 20,
+                    max = 256,
+                    step = 1,
+                    get = function() return CursorGlow.db.profile.maxSize end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.maxSize = val
+                    end,
+                },
+            },
+        },
+        profiles = AceDBOptions:GetOptionsTable(self.db),
+    },
+}
 
     AceConfig:RegisterOptionsTable("CursorGlow", options)
     AceConfigDialog:AddToBlizOptions("CursorGlow", "CursorGlow")
