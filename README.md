@@ -10,10 +10,15 @@ Combat Mode Specificity: Configure CursorGlow to activate only during combat, al
 Easy Configuration: Comes with a straightforward configuration menu integrated into the WoW interface, allowing you to personalize settings without typing commands.
 Whether you want your cursor to stand out with a bright pink star during a raid or a subtle blue swirl while exploring, CursorGlow offers a fun and functional way to make your gameplay experience uniquely yours. Perfect for streamers looking to add that extra flair to their streams or for players who just want a bit more sparkle in their game.
 
-Version 1.9 Compatibility: Fully updated for WoW patch 10.2.6.
+ 
 
 Elevate your gaming experience with CursorGlow - because even a cursor deserves to shine!
 
  
 
-You can change the color to whatever you feel you need. It will save the color you have chosen on a /reload or a logout/login. 
+Contributors:
+
+Special thanks to EKE00372 for translating the addon into Traditional Chinese (zhTW) and Simplified Chinese (zhCN). Your efforts help make this addon accessible to a wider audience across the Chinese-speaking community.
+ 
+
+FYI...it does work in Cataclysm
