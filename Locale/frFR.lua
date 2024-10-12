@@ -21,6 +21,23 @@ L["Set the minimum size of the texture"] = "Définissez la taille minimale de la
 L["Maximum Size"] = "Taille Maximale"
 L["Set the maximum size of the texture"] = "Définissez la taille maximale de la texture"
 L["Appearance"] = "Apparence"
+L["Explosion Color"] = "Couleur de l'Explosion"
+L["Pick a color for the explosion effect"] = "Choisissez une couleur pour l'effet d'explosion"
+L["General Settings"] = "Paramètres Généraux"
+L["Enable Explosion Effect"] = "Activer l'Effet d'Explosion"
+L["Texture Color"] = "Couleur de la Texture"
+L["Select the color for the texture"] = "Sélectionnez la couleur pour la texture"
+L["Enable or disable the explosion effect on left-click"] = "Activer ou désactiver l'effet d'explosion au clic gauche"
+L["Explosion Settings"] = "Paramètres d'Explosion"
+L["Appearance Settings"] = "Paramètres d'Apparence"
+L["Adjust the size of the explosion effect"] = "Ajustez la taille de l'effet d'explosion"
+L["Explosion Size"] = "Taille de l'Explosion"
+L["Explosion"] = "Explosion"
+L["Explosion Texture Size"] = "Taille de la Texture de l'Explosion"
+L["Adjust the texture size for the explosion effect"] = "Ajustez la taille de la texture pour l'effet d'explosion"
+L["Select the texture for the explosion effect"] = "Sélectionnez la texture pour l'effet d'explosion"
+L["Explosion Texture"] = "Texture de l'Explosion"
+
 
 -- Add all the color names
 L["Red"] = "Rouge"
