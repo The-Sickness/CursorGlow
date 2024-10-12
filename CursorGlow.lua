@@ -1,6 +1,6 @@
 -- CursorGlow
 -- Made by Sharpedge_Gaming
--- v2.9 - 11.0.2
+-- v3.0 - 11.0.2
 
 local LibStub = LibStub or _G.LibStub
 local AceDB = LibStub:GetLibrary("AceDB-3.0")
@@ -15,6 +15,8 @@ local icon = LibStub("LibDBIcon-1.0")
 local L = LibStub("AceLocale-3.0"):GetLocale("CursorGlow", true)
 
 local CursorGlow = AceAddon:NewAddon("CursorGlow", "AceEvent-3.0", "AceConsole-3.0")
+local speed = 0
+
 
 -- Define texture options
 local textureOptions = {
@@ -139,6 +141,46 @@ local colorOptions = {
     evoker = {0.20, 0.58, 0.50}
 }
 
+function CursorGlow:OnInitialize()
+    self.db = AceDB:New("CursorGlowDB", defaults, true)
+
+    local characterProfileName = UnitName("player") .. " - " .. GetRealmName()
+    if self.db:GetCurrentProfile() == "Default" then
+        self.db:SetProfile(characterProfileName)
+    end
+
+    -- Ensure color is set correctly
+    if not self.db.profile.color then
+        self.db.profile.color = {1, 1, 1}  -- Default to white color if not set
+    elseif self.db.profile.color[1] == 1 and self.db.profile.color[2] == 1 and self.db.profile.color[3] == 1 then
+        local classColor = GetDefaultClassColor()
+        self.db.profile.color = classColor
+    end
+
+    -- Register callbacks to handle profile changes
+    self.db.RegisterCallback(self, "OnProfileChanged", "ApplySettings")
+    self.db.RegisterCallback(self, "OnProfileCopied", "ApplySettings")
+    self.db.RegisterCallback(self, "OnProfileReset", "ApplySettings")
+
+    -- Handle minimap button
+    if minimapButton and icon then
+        icon:Register("CursorGlow", minimapButton, self.db.profile.minimap)
+    else
+        print("Error: Minimap button or LibDBIcon not properly initialized.")
+    end
+
+    -- Show or hide the minimap button based on the saved setting
+    if self.db.profile.minimap.hide then
+        icon:Hide("CursorGlow")
+    else
+        icon:Show("CursorGlow")
+    end
+
+    -- Apply the settings for the current profile
+    self:ApplySettings()
+end
+
+
 -- Function to get the default class color
 local function GetDefaultClassColor()
     local _, class = UnitClass("player")
@@ -151,11 +193,11 @@ local function GetDefaultClassColor()
     return colorOptions["red"]  -- Fallback color if class color is unavailable
 end
 
--- Function to update texture color and opacity
 local function UpdateTextureColor(color)
-    local colorValue = colorOptions[color] or color
+    local colorValue = colorOptions[color] or CursorGlow.db.profile.color or {1, 1, 1}
     texture:SetVertexColor(colorValue[1], colorValue[2], colorValue[3], CursorGlow.db.profile.opacity)
 end
+
 
 -- Function to update the texture
 local function UpdateTexture(textureKey)
@@ -191,21 +233,139 @@ end
 -- Initialize default settings with class color
 local defaultClassColor = GetDefaultClassColor() 
 
--- Define default settings with class color
 local defaults = {
     profile = {
-        operationMode = "enabledAlways", -- Default mode
-        color = defaultClassColor,       -- Default to class color
-        opacity = 1,                     -- Default opacity
-        minSize = 16,                    -- Default minimum size
-        maxSize = 175,                   -- Default maximum size
-        texture = "ring1",               -- Default texture
+        operationMode = "enabledAlways",
+        enableExplosion = false,
+        explosionColor = {1, 1, 1},
+        explosionSize = 15,  
+        explosionTextureSize = 10,  
+        explosionTexture = "ring1",  
+        opacity = 1,
+        minSize = 16,
+        maxSize = 175,
+        texture = "ring1",
         minimap = {
-            hide = false,                -- Minimap icon visibility
+            hide = false,
         },
     }
 }
 
+local frame = CreateFrame("Frame", nil, UIParent)
+frame:SetFrameStrata("TOOLTIP")
+frame:EnableMouse(true)  
+
+local particles = {}
+
+textureOptions["explosionParticle"] = "Interface\\Addons\\CursorGlow\\Textures\\Test17.png"
+
+local particles = {}
+
+local function CreateParticle(textureKey)
+    local particle = CreateFrame("Frame", nil, UIParent)
+    particle:SetFrameStrata("TOOLTIP")
+    particle:SetSize(16, 16)
+
+    local texture = particle:CreateTexture(nil, "ARTWORK")
+    local texturePath = textureOptions[textureKey]
+    if not texturePath then
+       
+        return
+    end
+
+    texture:SetTexture(texturePath)  
+    texture:SetBlendMode("ADD")
+    texture:SetAllPoints(particle)
+
+    particle.texture = texture
+    particle:SetAlpha(1)  
+    texture:SetAlpha(1)   
+    particle:Hide()
+
+    return particle
+end
+
+local function UpdateExplosionTexture(textureKey)
+    if not textureKey then
+        return
+    end
+
+    -- Check if the texture key exists in the textureOptions table
+    local texturePath = textureOptions[textureKey]
+    if not texturePath then
+        return
+    end
+
+    -- Recreate particles with the new texture
+    particles = {}  -- Clear existing particles
+    for i = 1, 100 do  -- Reinitialize 100 particles with the new texture
+        particles[i] = CreateParticle(textureKey)
+    end
+end
+
+local function TriggerExplosion(cursorX, cursorY)
+    local scale = UIParent:GetEffectiveScale()
+    local color = CursorGlow.db.profile.explosionColor  -- Get the explosion color from settings
+    local explosionSize = CursorGlow.db.profile.explosionSize  -- Get the explosion size from settings
+    local textureSize = CursorGlow.db.profile.explosionTextureSize or 10  -- Get the explosion texture size from settings
+    local explosionTexture = CursorGlow.db.profile.explosionTexture or "ring1"  -- Fallback to "ring1"
+
+    UpdateExplosionTexture(explosionTexture)  -- Update texture based on user selection
+
+    for _, particle in ipairs(particles) do
+        -- Randomize particle direction and distance, applying the explosion size
+        local angle = math.random() * 2 * math.pi
+        local distance = math.random(1, explosionSize)  -- Adjust particle spread based on explosion size
+        local xOffset = math.cos(angle) * distance
+        local yOffset = math.sin(angle) * distance
+
+        particle:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cursorX / scale, cursorY / scale)
+        particle:SetAlpha(1)  -- Reset alpha when the particle is shown
+        particle.texture:SetAlpha(1)  -- Reset the texture alpha
+        particle.texture:SetVertexColor(unpack(color))  -- Apply the selected color
+
+        -- Set the particle texture size based on the user's input
+        particle:SetSize(textureSize, textureSize)  -- Dynamically adjust texture size
+        particle:Show()
+
+        -- Animate particle movement with a fade-out
+        particle:SetScript("OnUpdate", function(self, elapsed)
+            local speed = 30
+            local dx, dy = speed * xOffset * elapsed, speed * yOffset * elapsed
+            local currentX, currentY = self:GetCenter()
+            particle:SetPoint("CENTER", UIParent, "BOTTOMLEFT", currentX + dx, currentY + dy)
+
+            -- Get the current alpha, ensure it isn't nil, and fade it out
+            local currentAlpha = particle:GetAlpha() or 1
+            local newAlpha = currentAlpha - (elapsed * 0.8)
+            if newAlpha <= 0 then
+                particle:Hide()  -- Hide the particle when it's fully faded out
+            else
+                particle:SetAlpha(newAlpha)  -- Apply the new alpha value
+            end
+        end)
+    end
+end
+
+local function UpdateExplosionTextureSize(size)
+    -- Iterate over all particles and update their size based on the value
+    for _, particle in ipairs(particles) do
+        particle:SetSize(size, size)  -- Adjust the width and height
+    end
+end
+
+local function TriggerExplosionOnClick(_, button)
+    if button == "LeftButton" then
+        -- Check if explosion is enabled in the settings
+        if CursorGlow.db.profile.enableExplosion then
+            local cursorX, cursorY = GetCursorPosition()
+            TriggerExplosion(cursorX, cursorY)
+        end
+    end
+end
+
+-- Hook into the global mouse down event for the world frame
+WorldFrame:HookScript("OnMouseDown", TriggerExplosionOnClick)
 
 -- Create a DataBroker object for the minimap button
 local minimapButton = LDB:NewDataObject("CursorGlow", {
@@ -232,6 +392,14 @@ local minimapButton = LDB:NewDataObject("CursorGlow", {
     end,
 })
 
+-- Apply the settings for the current profile
+function CursorGlow:ApplySettings()
+    -- Ensure the texture and color are applied based on the current profile
+    UpdateTexture(self.db.profile.texture)
+    UpdateTextureColor(self.db.profile.color)
+    UpdateAddonVisibility()
+end
+
 function CursorGlow:OnInitialize()
     self.db = AceDB:New("CursorGlowDB", defaults, true)
 
@@ -240,16 +408,21 @@ function CursorGlow:OnInitialize()
         self.db:SetProfile(characterProfileName)
     end
 
+    -- Register callbacks to handle profile changes
     self.db.RegisterCallback(self, "OnProfileChanged", "ApplySettings")
     self.db.RegisterCallback(self, "OnProfileCopied", "ApplySettings")
     self.db.RegisterCallback(self, "OnProfileReset", "ApplySettings")
 
     -- Ensure the color is set correctly
-    if self.db.profile.color[1] == 1 and self.db.profile.color[2] == 1 and self.db.profile.color[3] == 1 then
+    if not self.db.profile.color then
+        -- If the color field does not exist, initialize it with a default value
+        self.db.profile.color = {1, 1, 1}  -- Default to white
+    elseif self.db.profile.color[1] == 1 and self.db.profile.color[2] == 1 and self.db.profile.color[3] == 1 then
         local classColor = GetDefaultClassColor()
         self.db.profile.color = classColor
     end
 
+    -- Handle minimap button
     if minimapButton and icon then
         icon:Register("CursorGlow", minimapButton, self.db.profile.minimap)
     else
@@ -263,15 +436,64 @@ function CursorGlow:OnInitialize()
         icon:Show("CursorGlow")
     end
 
-    local options = {
+  function CursorGlow:OnInitialize()
+    self.db = AceDB:New("CursorGlowDB", defaults, true)
+
+    local characterProfileName = UnitName("player") .. " - " .. GetRealmName()
+    if self.db:GetCurrentProfile() == "Default" then
+        self.db:SetProfile(characterProfileName)
+    end
+
+    -- Register callbacks to handle profile changes
+    self.db.RegisterCallback(self, "OnProfileChanged", "ApplySettings")
+    self.db.RegisterCallback(self, "OnProfileCopied", "ApplySettings")
+    self.db.RegisterCallback(self, "OnProfileReset", "ApplySettings")
+
+    -- Ensure the color is set correctly
+    if not self.db.profile.color then
+        -- If the color field does not exist, initialize it with a default value
+        self.db.profile.color = {1, 1, 1}  -- Default to white
+    elseif self.db.profile.color[1] == 1 and self.db.profile.color[2] == 1 and self.db.profile.color[3] == 1 then
+        local classColor = GetDefaultClassColor()
+        self.db.profile.color = classColor
+    end
+
+    -- Handle minimap button
+    if minimapButton and icon then
+        icon:Register("CursorGlow", minimapButton, self.db.profile.minimap)
+    else
+        print("Error: Minimap button or LibDBIcon not properly initialized.")
+    end
+
+    -- Show or hide the minimap button based on the saved setting
+    if self.db.profile.minimap.hide then
+        icon:Hide("CursorGlow")
+    else
+        icon:Show("CursorGlow")
+    end
+
+    -- Apply the settings for the current profile
+    self:ApplySettings()
+end
+
+-- Create and register the main options
+local options = {
     name = "CursorGlow",
     type = 'group',
     args = {
+        -- General Settings Header
+        generalHeader = {
+            type = 'header',
+            name = L["General Settings"],
+            order = 1,
+        },
         general = {
             type = 'group',
             name = L["General"],
-            order = 1,
+            order = 2,
+            inline = true,
             args = {
+                -- Operation Mode
                 operationMode = {
                     type = 'select',
                     name = L["Operation Mode"],
@@ -288,6 +510,8 @@ function CursorGlow:OnInitialize()
                         UpdateAddonVisibility()
                     end,
                 },
+
+                -- Show Minimap Icon
                 showMinimapIcon = {
                     type = 'toggle',
                     name = L["Show Minimap Icon"],
@@ -303,25 +527,156 @@ function CursorGlow:OnInitialize()
                         end
                     end,
                 },
+
+                -- Spacer
+                spacerGeneral1 = {
+                    type = 'description',
+                    name = " ",  -- Blank spacer for separation
+                    order = 3,
+                },
             },
+        },
+
+        -- Explosion Settings Header
+        explosionHeader = {
+            type = 'header',
+            name = L["Explosion Settings"],
+            order = 10,
+        },
+        explosion = {
+            type = 'group',
+            name = L["Explosion"],
+            order = 11,
+            inline = true,
+            args = {
+                -- Enable/Disable Explosion Effect
+                enableExplosion = {
+                    type = 'toggle',
+                    name = L["Enable Explosion Effect"],
+                    desc = L["Enable or disable the explosion effect on left-click"],
+                    order = 1,
+                    get = function() return CursorGlow.db.profile.enableExplosion end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.enableExplosion = val
+                    end,
+                },
+
+                -- Explosion Color
+                explosionColor = {
+                    type = 'color',
+                    name = L["Explosion Color"],
+                    desc = L["Pick a color for the explosion effect"],
+                    order = 2,
+                    get = function() return unpack(CursorGlow.db.profile.explosionColor) end,
+                    set = function(_, r, g, b)
+                        CursorGlow.db.profile.explosionColor = {r, g, b}
+                    end,
+                    disabled = function() return not CursorGlow.db.profile.enableExplosion end,
+                },
+
+                -- Spacer
+                spacerExplosion1 = {
+                    type = 'description',
+                    name = " ",  -- Blank spacer for separation
+                    order = 3,
+                },
+
+                -- Explosion Size
+                explosionSize = {
+                    type = 'range',
+                    name = L["Explosion Size"],
+                    desc = L["Adjust the size of the explosion effect"],
+                    order = 4,
+                    min = 5,
+                    max = 50,
+                    step = 1,
+                    get = function() return CursorGlow.db.profile.explosionSize end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.explosionSize = val
+                    end,
+                },
+
+                -- Explosion Texture Size
+                explosionTextureSize = {
+                    type = 'range',
+                    name = L["Explosion Texture Size"],
+                    desc = L["Adjust the texture size for the explosion effect"],
+                    order = 5,
+                    min = 10,
+                    max = 40,
+                    step = 1,
+                    get = function() return CursorGlow.db.profile.explosionTextureSize end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.explosionTextureSize = val
+                        UpdateExplosionTextureSize(val)
+                    end,
+                    disabled = function() return not CursorGlow.db.profile.enableExplosion end,
+					},
+					explosionTexture = {
+    type = 'select',
+    name = L["Explosion Texture"],
+    desc = L["Select the texture for the explosion effect"],
+    order = 6,
+    values = {
+        ring1 = "Ring 1",
+        ring2 = "Ring 2",
+        ring3 = "Ring 3",
+        ring4 = "Ring 4",
+        ring5 = "Ring 5",
+        ring6 = "Ring 6",
+        ring7 = "Ring 7",
+        ring8 = "Ring 8",
+        ring9 = "Ring 9",
+        ring10 = "Star 1",
+        ring11 = "Star 2",
+        ring12 = "Star 3",
+        ring13 = "Star 4",
+        ring14 = "Star 5",
+        ring15 = "Starburst",
+        ring16 = "Butterfly",
+        ring17 = "Butterfly 2",
+        ring18 = "Butterfly 3",
+        ring19 = "Swirl",
+        ring20 = "Swirl 2",
+        ring21 = "Horde",
+        ring22 = "Alliance",
+    },
+    get = function() return CursorGlow.db.profile.explosionTexture end,
+    set = function(_, val)
+        CursorGlow.db.profile.explosionTexture = val
+        UpdateExplosionTexture(val)  -- Update the texture when the user selects one
+    end,
+                },
+            },
+        },
+
+        -- Appearance Settings Header
+        appearanceHeader = {
+            type = 'header',
+            name = L["Appearance Settings"],
+            order = 20,
         },
         appearance = {
             type = 'group',
             name = L["Appearance"],
-            order = 2,
+            order = 21,
+            inline = true,
             args = {
+                -- Texture Selection
                 texture = {
                     type = 'select',
                     name = L["Texture"],
                     desc = L["Select the texture for the cursor glow"],
                     order = 1,
-                    values = values, 
+                    values = values,
                     get = function() return CursorGlow.db.profile.texture end,
                     set = function(_, val)
                         CursorGlow.db.profile.texture = val
                         UpdateTexture(val)
                     end,
                 },
+
+                -- Texture Color
                 color = {
                     type = 'select',
                     name = L["Color"],
@@ -344,19 +699,6 @@ function CursorGlow:OnInitialize()
                         lime = L["Lime"],
                         olive = L["Olive"],
                         navy = L["Navy"],
-                        warrior = L["Warrior"],
-                        paladin = L["Paladin"],
-                        hunter = L["Hunter"],
-                        rogue = L["Rogue"],
-                        priest = L["Priest"],
-                        deathknight = L["Death Knight"],
-                        shaman = L["Shaman"],
-                        mage = L["Mage"],
-                        warlock = L["Warlock"],
-                        monk = L["Monk"],
-                        druid = L["Druid"],
-                        demonhunter = L["Demon Hunter"],
-                        evoker = L["Evoker"],
                     },
                     get = function() return CursorGlow.db.profile.color end,
                     set = function(_, val)
@@ -364,6 +706,8 @@ function CursorGlow:OnInitialize()
                         UpdateTextureColor(val)
                     end,
                 },
+
+                -- Opacity Adjustment
                 opacity = {
                     type = 'range',
                     name = L["Opacity"],
@@ -378,11 +722,20 @@ function CursorGlow:OnInitialize()
                         UpdateTextureColor(CursorGlow.db.profile.color)
                     end,
                 },
+
+                -- Spacer
+                spacerAppearance1 = {
+                    type = 'description',
+                    name = " ",  -- Blank spacer for separation
+                    order = 4,
+                },
+
+                -- Minimum Size
                 minSize = {
                     type = 'range',
                     name = L["Minimum Size"],
                     desc = L["Set the minimum size of the texture"],
-                    order = 4,
+                    order = 5,
                     min = 16,
                     max = 64,
                     step = 1,
@@ -391,11 +744,13 @@ function CursorGlow:OnInitialize()
                         CursorGlow.db.profile.minSize = val
                     end,
                 },
+
+                -- Maximum Size
                 maxSize = {
                     type = 'range',
                     name = L["Maximum Size"],
                     desc = L["Set the maximum size of the texture"],
-                    order = 5,
+                    order = 6,
                     min = 20,
                     max = 256,
                     step = 1,
@@ -406,24 +761,27 @@ function CursorGlow:OnInitialize()
                 },
             },
         },
-        profiles = AceDBOptions:GetOptionsTable(self.db),
     },
 }
 
-    AceConfig:RegisterOptionsTable("CursorGlow", options)
-    AceConfigDialog:AddToBlizOptions("CursorGlow", "CursorGlow")
+-- Profile options in a separate Blizzard options panel
+local profileOptions = {
+    name = "CursorGlow Profiles",
+    type = 'group',
+    args = AceDBOptions:GetOptionsTable(CursorGlow.db).args,
+}
+
+-- Register the main options (CursorGlow configuration)
+AceConfig:RegisterOptionsTable("CursorGlow", options)
+AceConfigDialog:AddToBlizOptions("CursorGlow", "CursorGlow")
+
+-- Register the profile options separately under "Profiles" tab
+AceConfig:RegisterOptionsTable("CursorGlow Profiles", AceDBOptions:GetOptionsTable(CursorGlow.db))
+AceConfigDialog:AddToBlizOptions("CursorGlow Profiles", "Profiles", "CursorGlow")
 
     -- Apply the settings for the current profile
     self:ApplySettings()
 end
-
-function CursorGlow:ApplySettings()
-    -- Ensure the texture and color are applied based on the current profile
-    UpdateTexture(self.db.profile.texture)
-    UpdateTextureColor(self.db.profile.color)
-    UpdateAddonVisibility()
-end
-
 
 frame:RegisterEvent("PLAYER_REGEN_DISABLED")
 frame:RegisterEvent("PLAYER_REGEN_ENABLED")
