@@ -38,6 +38,12 @@ L["Explosion Texture Size"] = "Explosion Texture Size"
 L["Adjust the texture size for the explosion effect"] = "Adjust the texture size for the explosion effect"
 L["Select the texture for the explosion effect"] = "Select the texture for the explosion effect"
 L["Explosion Texture"] = "Explosion Texture"
+L["Tail Effect Settings"] = "Tail Effect Settings"
+L["Tail Effect"] = "Tail Effect"
+L["Enable Tail Effect"] = "Enable Tail Effect"
+L["Toggle the tail effect behind the cursor"] = "Toggle the tail effect behind the cursor"
+L["Tail Length"] = "Tail Length"
+L["Adjust the length of the cursor tail"] = "Adjust the length of the cursor tail"
 
 
 

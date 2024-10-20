@@ -37,6 +37,12 @@ L["Explosion Texture Size"] = "爆炸材质尺寸"
 L["Adjust the texture size for the explosion effect"] = "调整爆炸效果的材质尺寸"
 L["Select the texture for the explosion effect"] = "选择爆炸效果的材质"
 L["Explosion Texture"] = "爆炸材质"
+L["Tail Effect Settings"] = "尾部效果设置"
+L["Tail Effect"] = "尾部效果"
+L["Enable Tail Effect"] = "启用尾部效果"
+L["Toggle the tail effect behind the cursor"] = "切换鼠标指针后的尾部效果"
+L["Tail Length"] = "尾部长度"
+L["Adjust the length of the cursor tail"] = "调整鼠标指针尾部的长度"
 
 
 -- Add all the color names

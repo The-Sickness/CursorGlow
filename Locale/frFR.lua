@@ -37,6 +37,12 @@ L["Explosion Texture Size"] = "Taille de la Texture de l'Explosion"
 L["Adjust the texture size for the explosion effect"] = "Ajustez la taille de la texture pour l'effet d'explosion"
 L["Select the texture for the explosion effect"] = "Sélectionnez la texture pour l'effet d'explosion"
 L["Explosion Texture"] = "Texture de l'Explosion"
+L["Tail Effect Settings"] = "Paramètres de l'Effet de Queue"
+L["Tail Effect"] = "Effet de Queue"
+L["Enable Tail Effect"] = "Activer l'Effet de Queue"
+L["Toggle the tail effect behind the cursor"] = "Activer ou désactiver l'effet de queue derrière le curseur"
+L["Tail Length"] = "Longueur de la Queue"
+L["Adjust the length of the cursor tail"] = "Ajuster la longueur de la queue du curseur"
 
 
 -- Add all the color names

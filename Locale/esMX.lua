@@ -37,6 +37,12 @@ L["Explosion Texture Size"] = "Tamaño de la Textura de la Explosión"
 L["Adjust the texture size for the explosion effect"] = "Ajusta el tamaño de la textura para el efecto de explosión"
 L["Select the texture for the explosion effect"] = "Selecciona la textura para el efecto de explosión"
 L["Explosion Texture"] = "Textura de la Explosión"
+L["Tail Effect Settings"] = "Configuración del Efecto de Cola"
+L["Tail Effect"] = "Efecto de Cola"
+L["Enable Tail Effect"] = "Habilitar Efecto de Cola"
+L["Toggle the tail effect behind the cursor"] = "Alternar el efecto de cola detrás del cursor"
+L["Tail Length"] = "Longitud de la Cola"
+L["Adjust the length of the cursor tail"] = "Ajustar la longitud de la cola del cursor"
 
 
 -- Add all the color names
