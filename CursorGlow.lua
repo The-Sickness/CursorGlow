@@ -1,6 +1,6 @@
 -- CursorGlow
 -- Made by Sharpedge_Gaming
--- v3.2 - 11.0.2
+-- v3.3 - 11.0.2
 
 local LibStub = LibStub or _G.LibStub
 local AceDB = LibStub:GetLibrary("AceDB-3.0")
@@ -16,7 +16,7 @@ local L = LibStub("AceLocale-3.0"):GetLocale("CursorGlow", true)
 
 local CursorGlow = AceAddon:NewAddon("CursorGlow", "AceEvent-3.0", "AceConsole-3.0")
 local speed = 0
-
+local stationaryTime = 0
 
 -- Define texture options
 local textureOptions = {
@@ -143,9 +143,18 @@ local colorOptions = {
 
 -- Tail effect variables
 local tailSegments = {}
-local tailLength = 10  -- Adjust the length of the tail
+local tailLength = 60  -- Adjust the length of the tail
 local tailPositions = {}  -- Stores previous cursor positions
 local tailTextures = {}   -- Stores the tail textures
+
+-- Initialize tail textures
+for i = 1, tailLength do
+    local tailTexture = frame:CreateTexture(nil, "BACKGROUND")
+    tailTexture:SetTexture(textureOptions["star4"])  -- Use the same texture as the main glow
+    tailTexture:SetBlendMode("ADD")
+    tailTexture:SetSize(32, 32)
+    tailTextures[i] = tailTexture
+end
 
 local function InitializeTailTextures()
     for _, tailTexture in ipairs(tailTextures) do
@@ -154,10 +163,13 @@ local function InitializeTailTextures()
     end
     tailTextures = {}
     tailPositions = {}
+
     local colorValue = colorOptions[CursorGlow.db.profile.color] or {1, 1, 1}
-    for i = 1, tailLength do
+    local texturePath = textureOptions[CursorGlow.db.profile.texture] or textureOptions["star4"]
+
+    for i = 1, CursorGlow.tailLength do
         local tailTexture = frame:CreateTexture(nil, "BACKGROUND")
-        tailTexture:SetTexture(textureOptions[CursorGlow.db.profile.texture])  -- Use the selected texture
+        tailTexture:SetTexture(texturePath)
         tailTexture:SetBlendMode("ADD")
         tailTexture:SetSize(32, 32)
         tailTexture:SetVertexColor(colorValue[1], colorValue[2], colorValue[3], CursorGlow.db.profile.opacity)
@@ -172,17 +184,20 @@ function CursorGlow:OnInitialize()
     if self.db:GetCurrentProfile() == "Default" then
         self.db:SetProfile(characterProfileName)
     end
-    -- Ensure color is set correctly
-    if not self.db.profile.color then
-        self.db.profile.color = {1, 1, 1}  -- Default to white color if not set
-    elseif self.db.profile.color[1] == 1 and self.db.profile.color[2] == 1 and self.db.profile.color[3] == 1 then
-        local classColor = GetDefaultClassColor()
-        self.db.profile.color = classColor
-    end
+
     -- Register callbacks to handle profile changes
     self.db.RegisterCallback(self, "OnProfileChanged", "ApplySettings")
     self.db.RegisterCallback(self, "OnProfileCopied", "ApplySettings")
     self.db.RegisterCallback(self, "OnProfileReset", "ApplySettings")
+
+    -- Ensure the color is set correctly
+    if not self.db.profile.color then
+        -- If the color field does not exist, initialize it with a default value
+        self.db.profile.color = {1, 1, 1}  -- Default to white
+    elseif self.db.profile.color[1] == 1 and self.db.profile.color[2] == 1 and self.db.profile.color[3] == 1 then
+        local classColor = GetDefaultClassColor()
+        self.db.profile.color = classColor
+    end
 
     -- Handle minimap button
     if minimapButton and icon then
@@ -214,8 +229,8 @@ local function GetDefaultClassColor()
     return colorOptions["red"]  -- Fallback color if class color is unavailable
 end
 
-local function UpdateTextureColor(color)
-    local colorValue = colorOptions[color] or CursorGlow.db.profile.color or {1, 1, 1}
+local function UpdateTextureColor()
+    local colorValue = colorOptions[CursorGlow.db.profile.color] or {1, 1, 1}
     texture:SetVertexColor(colorValue[1], colorValue[2], colorValue[3], CursorGlow.db.profile.opacity)
     -- Update tail textures' color
     for _, tailTexture in ipairs(tailTextures) do
@@ -223,9 +238,11 @@ local function UpdateTextureColor(color)
     end
 end
 
+-- Function to update the texture
 local function UpdateTexture(textureKey)
     local texturePath = textureOptions[textureKey] or textureOptions["star4"]
     texture:SetTexture(texturePath)
+    -- Update tail textures' texture
     for _, tailTexture in ipairs(tailTextures) do
         tailTexture:SetTexture(texturePath)
     end
@@ -266,22 +283,20 @@ local defaults = {
         explosionColor = {1, 1, 1},
         explosionSize = 15,  
         explosionTextureSize = 10,  
-        explosionTexture = "ring1",
-		enableTail = false,       
-        tailLength = 10,         
+        explosionTexture = "ring1",  
         opacity = 1,
         minSize = 16,
         maxSize = 175,
         texture = "ring1",
+        color = "white",  -- Default color key
+        enableTail = false,  -- Default to tail effect enabled
+        tailLength = 60,  -- Default tail length
         minimap = {
             hide = false,
         },
     }
 }
 
-local frame = CreateFrame("Frame", nil, UIParent)
-frame:SetFrameStrata("TOOLTIP")
-frame:EnableMouse(true)  
 
 local particles = {}
 
@@ -420,14 +435,16 @@ local minimapButton = LDB:NewDataObject("CursorGlow", {
     end,
 })
 
--- Apply the settings for the current profile
 function CursorGlow:ApplySettings()
+    -- Ensure the texture and color are applied based on the current profile
     UpdateTexture(self.db.profile.texture)
     UpdateTextureColor(self.db.profile.color)
     UpdateAddonVisibility()
-    tailLength = self.db.profile.tailLength or 10
+    CursorGlow.tailLength = self.db.profile.tailLength or 10
     InitializeTailTextures()
 end
+
+
 
 function CursorGlow:OnInitialize()
     self.db = AceDB:New("CursorGlowDB", defaults, true)
@@ -701,10 +718,11 @@ local options = {
                     order = 1,
                     values = values,
                     get = function() return CursorGlow.db.profile.texture end,
-                    set = function(_, val)
-                        CursorGlow.db.profile.texture = val
-                        UpdateTexture(val)
-                    end,
+    set = function(_, val)
+        CursorGlow.db.profile.texture = val
+        UpdateTexture(val)
+        InitializeTailTextures()  -- Re-initialize tail textures with new texture
+    end,
                 },
 
                 -- Texture Color
@@ -732,10 +750,11 @@ local options = {
                         navy = L["Navy"],
                     },
                     get = function() return CursorGlow.db.profile.color end,
-                    set = function(_, val)
-                        CursorGlow.db.profile.color = val
-                        UpdateTextureColor(val)
-                    end,
+    set = function(_, val)
+        CursorGlow.db.profile.color = val
+        UpdateTextureColor()
+        InitializeTailTextures()  -- Re-initialize tail textures with new color
+    end,
                 },
 
                 -- Opacity Adjustment
@@ -823,25 +842,26 @@ local options = {
                     end,
                 },
                 tailLength = {
-                    type = 'range',
-                    name = L["Tail Length"],
-                    desc = L["Adjust the length of the cursor tail"],
-                    order = 2,
-                    min = 10,
-                    max = 80,
-                    step = 1,
-                    get = function() return CursorGlow.db.profile.tailLength end,
-                    set = function(_, val)
-                        CursorGlow.db.profile.tailLength = val
-                        tailLength = val
-                        InitializeTailTextures()
-                    end,
-                    disabled = function() return not CursorGlow.db.profile.enableTail end,
+    type = 'range',
+    name = L["Tail Length"],
+    desc = L["Adjust the length of the cursor tail"],
+    order = 2,
+    min = 10,
+    max = 80,
+    step = 1,
+    get = function() return CursorGlow.db.profile.tailLength end,
+    set = function(_, val)
+        CursorGlow.db.profile.tailLength = val
+        CursorGlow.tailLength = val
+        InitializeTailTextures()
+    end,
+    disabled = function() return not CursorGlow.db.profile.enableTail end,
                 },
             },
         },
     },
 }
+
 
 -- Profile options in a separate Blizzard options panel
 local profileOptions = {
@@ -895,6 +915,7 @@ frame:SetScript("OnUpdate", function(self, elapsed)
     local size = math.max(CursorGlow.db.profile.minSize, CursorGlow.db.profile.maxSize)
 
     if CursorGlow.db.profile.operationMode == "enabledAlwaysOnCursor" then
+        -- Code for always-on-cursor mode
         local scale = UIParent:GetEffectiveScale()
         local cursorX, cursorY = GetCursorPosition()
         texture:SetHeight(size)
@@ -902,6 +923,7 @@ frame:SetScript("OnUpdate", function(self, elapsed)
         texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cursorX / scale, cursorY / scale)
         texture:Show()
     else
+        -- Initialization and calculation code
         CursorGlow.db.profile.maxSize = CursorGlow.db.profile.maxSize or 128
         CursorGlow.db.profile.minSize = CursorGlow.db.profile.minSize or 16
 
@@ -924,6 +946,10 @@ frame:SetScript("OnUpdate", function(self, elapsed)
 
         if distance > 0 then
             -- Cursor is moving
+            -- Reset stationary time
+            stationaryTime = 0
+
+            -- Existing movement code
             texture:SetHeight(size)
             texture:SetWidth(size)
             texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", (cursorX + 0.5 * dX) / scale, (cursorY + 0.5 * dY) / scale)
@@ -933,7 +959,7 @@ frame:SetScript("OnUpdate", function(self, elapsed)
                 -- Tail effect logic
                 local cursorPos = { x = cursorX / scale, y = cursorY / scale }
                 table.insert(tailPositions, 1, cursorPos)
-                if #tailPositions > tailLength then
+                if #tailPositions > CursorGlow.tailLength then
                     table.remove(tailPositions)
                 end
 
@@ -941,9 +967,9 @@ frame:SetScript("OnUpdate", function(self, elapsed)
                     local pos = tailPositions[i]
                     if pos then
                         tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)
-                        local alpha = (tailLength - i + 1) / tailLength  -- Alpha decreases along the tail
+                        local alpha = (CursorGlow.tailLength - i + 1) / CursorGlow.tailLength
                         tailTexture:SetAlpha(alpha * CursorGlow.db.profile.opacity)
-                        local tailSize = size * alpha  -- Size decreases with alpha
+                        local tailSize = size * alpha
                         tailTexture:SetSize(tailSize, tailSize)
                         tailTexture:Show()
                     else
@@ -960,15 +986,47 @@ frame:SetScript("OnUpdate", function(self, elapsed)
         else
             -- Cursor is stationary
             texture:Hide()
-            -- Hide tail textures
-            for _, tailTexture in ipairs(tailTextures) do
-                tailTexture:Hide()
+            stationaryTime = stationaryTime + elapsed
+
+            if CursorGlow.db.profile.enableTail then
+                -- Tail effect logic when stationary
+                for i, tailTexture in ipairs(tailTextures) do
+                    local pos = tailPositions[i]
+                    if pos then
+                        tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)
+                        -- Calculate alpha based on stationary time
+                        local alpha = ((CursorGlow.tailLength - i + 1) / CursorGlow.tailLength) * math.max(1 - stationaryTime, 0)
+                        tailTexture:SetAlpha(alpha * CursorGlow.db.profile.opacity)
+                        local tailSize = size * alpha
+                        tailTexture:SetSize(tailSize, tailSize)
+                        if alpha > 0 then
+                            tailTexture:Show()
+                        else
+                            tailTexture:Hide()
+                        end
+                    else
+                        tailTexture:Hide()
+                    end
+                end
+
+                -- Remove positions when alpha reaches zero
+                if stationaryTime >= 1 then  -- Adjust duration as needed
+                    tailPositions = {}
+                end
+            else
+                -- Tail effect disabled
+                for _, tailTexture in ipairs(tailTextures) do
+                    tailTexture:Hide()
+                end
+                tailPositions = {}
             end
-            -- Clear tail positions
-            tailPositions = {}
         end
 
         prevX = cursorX
         prevY = cursorY
     end
 end)
+
+
+
+
