@@ -44,6 +44,8 @@ L["Enable Tail Effect"] = "Enable Tail Effect"
 L["Toggle the tail effect behind the cursor"] = "Toggle the tail effect behind the cursor"
 L["Tail Length"] = "Tail Length"
 L["Adjust the length of the cursor tail"] = "Adjust the length of the cursor tail"
+L["Enable Global Profile"] = "Enable Global Profile"
+L["Use the same settings for all characters"] = "Use the same settings for all characters"
 
 
 

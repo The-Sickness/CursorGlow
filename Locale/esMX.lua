@@ -40,9 +40,11 @@ L["Explosion Texture"] = "Textura de la Explosión"
 L["Tail Effect Settings"] = "Configuración del Efecto de Cola"
 L["Tail Effect"] = "Efecto de Cola"
 L["Enable Tail Effect"] = "Habilitar Efecto de Cola"
-L["Toggle the tail effect behind the cursor"] = "Alternar el efecto de cola detrás del cursor"
+L["Toggle the tail effect behind the cursor"] = "Activar o desactivar el efecto de cola detrás del cursor"
 L["Tail Length"] = "Longitud de la Cola"
-L["Adjust the length of the cursor tail"] = "Ajustar la longitud de la cola del cursor"
+L["Adjust the length of the cursor tail"] = "Ajusta la longitud de la cola del cursor"
+L["Enable Global Profile"] = "Habilitar Perfil Global"
+L["Use the same settings for all characters"] = "Usar la misma configuración para todos los personajes"
 
 
 -- Add all the color names

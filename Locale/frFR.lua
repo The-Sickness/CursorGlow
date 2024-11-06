@@ -43,6 +43,8 @@ L["Enable Tail Effect"] = "Activer l'Effet de Queue"
 L["Toggle the tail effect behind the cursor"] = "Activer ou désactiver l'effet de queue derrière le curseur"
 L["Tail Length"] = "Longueur de la Queue"
 L["Adjust the length of the cursor tail"] = "Ajuster la longueur de la queue du curseur"
+L["Enable Global Profile"] = "Activer le Profil Global"
+L["Use the same settings for all characters"] = "Utiliser les mêmes paramètres pour tous les personnages"
 
 
 -- Add all the color names

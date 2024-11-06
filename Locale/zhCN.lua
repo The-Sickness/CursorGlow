@@ -43,6 +43,8 @@ L["Enable Tail Effect"] = "启用尾部效果"
 L["Toggle the tail effect behind the cursor"] = "切换鼠标指针后的尾部效果"
 L["Tail Length"] = "尾部长度"
 L["Adjust the length of the cursor tail"] = "调整鼠标指针尾部的长度"
+L["Enable Global Profile"] = "启用全局配置"
+L["Use the same settings for all characters"] = "对所有角色使用相同的设置"
 
 
 -- Add all the color names

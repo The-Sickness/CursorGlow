@@ -43,7 +43,8 @@ L["Enable Tail Effect"] = "Habilitar Efecto Cola"
 L["Toggle the tail effect behind the cursor"] = "Activar o desactivar el efecto de cola detrás del cursor"
 L["Tail Length"] = "Longitud de la Cola"
 L["Adjust the length of the cursor tail"] = "Ajusta la longitud de la cola del cursor"
-
+L["Enable Global Profile"] = "Habilitar Perfil Global"
+L["Use the same settings for all characters"] = "Usar la misma configuración para todos los personajes"
 
 -- Add all the color names
 L["Red"] = "Rojo"
