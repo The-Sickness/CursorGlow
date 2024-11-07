@@ -1,6 +1,6 @@
 -- CursorGlow
 -- Made by Sharpedge_Gaming
--- v3.4 - 11.0.5
+-- v3.5 - 11.0.5
 
 local LibStub = LibStub or _G.LibStub
 local AceDB = LibStub:GetLibrary("AceDB-3.0")
@@ -236,7 +236,8 @@ end
 -- Initialize default settings with class color
 local defaultClassColor = GetDefaultClassColor() 
 
-local globalDefaults = {
+-- Define default values for profiles and global settings
+local profileDefaults = {
     profile = {
         operationMode = "enabledAlways",
         enableExplosion = false,
@@ -251,9 +252,16 @@ local globalDefaults = {
         color = "white",
         enableTail = false,
         tailLength = 60,
-        minimap = { hide = false },  -- Ensure minimap settings are included
+        minimap = { hide = false },
     }
 }
+
+local globalDefaults = {
+    global = {
+        profileEnabled = false,
+    }
+}
+
 
 local particles = {}
 
@@ -394,85 +402,92 @@ local minimapButton = LDB:NewDataObject("CursorGlow", {
 
 function CursorGlow:ApplySettings()
     local profile = self.db.profile
-    profile.minimap = profile.minimap or { hide = false } -- Ensure minimap settings are initialized
-    profile.explosionColor = profile.explosionColor or {1, 1, 1} -- Ensure explosionColor is initialized
-    profile.minSize = profile.minSize or 16 -- Fallback to default if nil
-    profile.maxSize = profile.maxSize or 175 -- Fallback to default if nil
 
+    -- Initialize any missing profile settings with defaults
+    profile.minimap = profile.minimap or { hide = false }  -- Ensure minimap settings are initialized
+    profile.explosionColor = profile.explosionColor or {1, 1, 1}  -- Ensure explosionColor is initialized
+    profile.minSize = profile.minSize or 16  -- Fallback to default if nil
+    profile.maxSize = profile.maxSize or 175  -- Fallback to default if nil
+
+    -- Apply texture, color, and other settings based on the current profile
     UpdateTexture(profile.texture)
     UpdateTextureColor(profile.color)
     UpdateAddonVisibility()
     CursorGlow.tailLength = profile.tailLength or 10
     InitializeTailTextures()
+
+    -- Manage minimap button visibility based on profile settings
+    if profile.minimap.hide then
+        icon:Hide("CursorGlow")
+    else
+        icon:Show("CursorGlow")
+    end
 end
 
-function CursorGlow:SwitchProfile(forceGlobal)
-    if forceGlobal or self.db.global.profileEnabled then
-        self.db:SetProfile("Global")
 
-        local profile = self.db.profile
-        profile.operationMode = profile.operationMode or "enabledAlways"
-        profile.enableExplosion = profile.enableExplosion or false
-        profile.explosionColor = profile.explosionColor or {1, 1, 1}
-        profile.explosionSize = profile.explosionSize or 15
-        profile.explosionTextureSize = profile.explosionTextureSize or 10
-        profile.explosionTexture = profile.explosionTexture or "ring1"
-        profile.opacity = profile.opacity or 1
-        profile.minSize = profile.minSize or 16
-        profile.maxSize = profile.maxSize or 175
-        profile.texture = profile.texture or "ring1"
-        profile.color = profile.color or {1, 1, 1}  -- Default to white for global profile
-        profile.enableTail = profile.enableTail or false
-        profile.tailLength = profile.tailLength or 60
-        profile.minimap = profile.minimap or { hide = false }
+function CursorGlow:SwitchProfile(forceGlobal, profileName)
+    if profileName then
+        -- Set a specific profile by name
+        self.db:SetProfile(profileName)
+        self.dbGlobal.global.lastSelectedProfile = profileName  -- Save as last-selected
+    elseif forceGlobal or self.dbGlobal.global.profileEnabled then
+        -- Set to global profile
+        self.db:SetProfile("Global")
+        self.dbGlobal.global.profileEnabled = true
+        self.dbGlobal.global.lastSelectedProfile = "Global"  -- Save as last-selected
     else
-        -- Use a character-specific profile name
+        -- Set to character-specific profile
         local characterProfileName = UnitName("player") .. " - " .. GetRealmName()
         self.db:SetProfile(characterProfileName)
-
-        -- Ensure character-specific defaults are applied
-        local profile = self.db.profile
-        profile.operationMode = profile.operationMode or "enabledAlways"
-        profile.enableExplosion = profile.enableExplosion or false
-        profile.explosionColor = profile.explosionColor or {1, 1, 1}
-        profile.explosionSize = profile.explosionSize or 15
-        profile.explosionTextureSize = profile.explosionTextureSize or 10
-        profile.explosionTexture = profile.explosionTexture or "ring1"
-        profile.opacity = profile.opacity or 1
-        profile.minSize = profile.minSize or 16
-        profile.maxSize = profile.maxSize or 175
-        profile.texture = profile.texture or "ring1"
-        
-        -- Set class color if this is a new character profile (no color set)
-        if not profile.color or (profile.color[1] == 1 and profile.color[2] == 1 and profile.color[3] == 1) then
-            profile.color = GetDefaultClassColor()  -- Set to class color on first load
-        end
-
-        profile.enableTail = profile.enableTail or false
-        profile.tailLength = profile.tailLength or 60
-        profile.minimap = profile.minimap or { hide = false }
+        self.dbGlobal.global.profileEnabled = false
+        self.dbGlobal.global.lastSelectedProfile = characterProfileName  -- Save as last-selected
     end
+
+    -- Ensure all necessary defaults are applied in the selected profile
+    local profile = self.db.profile
+    profile.operationMode = profile.operationMode or "enabledAlways"
+    profile.enableExplosion = profile.enableExplosion or false
+    profile.explosionColor = profile.explosionColor or {1, 1, 1}
+    profile.explosionSize = profile.explosionSize or 15
+    profile.explosionTextureSize = profile.explosionTextureSize or 10
+    profile.explosionTexture = profile.explosionTexture or "ring1"
+    profile.opacity = profile.opacity or 1
+    profile.minSize = profile.minSize or 16
+    profile.maxSize = profile.maxSize or 175
+    profile.texture = profile.texture or "ring1"
+    profile.color = profile.color or (forceGlobal and {1, 1, 1} or GetDefaultClassColor())
+    profile.enableTail = profile.enableTail or false
+    profile.tailLength = profile.tailLength or 60
+    profile.minimap = profile.minimap or { hide = false }
+
+    -- Apply the updated profile settings
+    self:ApplySettings()
 end
 
 function CursorGlow:OnInitialize()
-    self.db = AceDB:New("CursorGlowDB", { profile = globalDefaults.profile }, true)
-    self.db.global = AceDB:New("CursorGlowGlobalDB", globalDefaults, true)
+    -- Initialize the profile-specific database with defaults
+    self.db = LibStub("AceDB-3.0"):New("CursorGlowDB", profileDefaults, true)
+    
+    -- Initialize global settings for global profile toggle
+    self.dbGlobal = LibStub("AceDB-3.0"):New("CursorGlowGlobalDB", globalDefaults, true)
 
-    if self.db.global.profileEnabled then
-        self:SwitchProfile(true) -- Use global profile if enabled
+    -- Load last-selected profile, default to Global if enabled, or character-specific otherwise
+    if self.dbGlobal.global.lastSelectedProfile then
+        self.db:SetProfile(self.dbGlobal.global.lastSelectedProfile)
+    elseif self.dbGlobal.global.profileEnabled then
+        self.db:SetProfile("Global")
     else
-        self:SwitchProfile(false) -- Use character-specific profile if global is disabled
+        local characterProfileName = UnitName("player") .. " - " .. GetRealmName()
+        self.db:SetProfile(characterProfileName)
     end
 
-    -- Register callbacks to handle profile changes dynamically
+    -- Register callbacks for dynamic profile changes
     self.db.RegisterCallback(self, "OnProfileChanged", "ApplySettings")
     self.db.RegisterCallback(self, "OnProfileCopied", "ApplySettings")
     self.db.RegisterCallback(self, "OnProfileReset", "ApplySettings")
-
-    -- Ensure default color settings are applied if missing
-    if not self.db.profile.color then
-        self.db.profile.color = GetDefaultClassColor()
-    end
+    
+    -- Apply initial profile settings
+    self:ApplySettings()
 
     -- Initialize minimap button visibility
     if minimapButton and icon then
@@ -481,12 +496,12 @@ function CursorGlow:OnInitialize()
         print("Error: Minimap button or LibDBIcon not properly initialized.")
     end
 
-    -- Update minimap button visibility
+    -- Manage minimap button visibility based on saved settings
     if self.db.profile.minimap and self.db.profile.minimap.hide then
         icon:Hide("CursorGlow")
     else
         icon:Show("CursorGlow")
-end
+    end
 
 -- Create and register the main options
 local options = {
@@ -510,11 +525,18 @@ local options = {
     name = L["Enable Global Profile"],
     desc = L["Use the same settings for all characters"],
     order = 1,
-    get = function() return CursorGlow.db.global.profileEnabled end,
+    get = function() return CursorGlow.dbGlobal.global.profileEnabled end,
     set = function(_, val)
-        CursorGlow.db.global.profileEnabled = val
-        CursorGlow:SwitchProfile()
+        CursorGlow.dbGlobal.global.profileEnabled = val
+        if val then
+            CursorGlow.db:SetProfile("Global")
+        else
+            local characterProfileName = UnitName("player") .. " - " .. GetRealmName()
+            CursorGlow.db:SetProfile(characterProfileName)
+        end
+        CursorGlow:ApplySettings()
     end,
+
 },
 
                 operationMode = {
@@ -887,9 +909,28 @@ end
 
 frame:SetScript("OnEvent", function(self, event, ...)
     if event == "ADDON_LOADED" and ... == "CursorGlow" then
-        UpdateTexture(CursorGlow.db.profile.texture)
-        UpdateTextureColor(CursorGlow.db.profile.color)
-        UpdateAddonVisibility()
+        -- Prioritize loading lastSelectedProfile if it exists
+        if CursorGlow.dbGlobal.global.lastSelectedProfile then
+            CursorGlow.db:SetProfile(CursorGlow.dbGlobal.global.lastSelectedProfile)
+        elseif CursorGlow.dbGlobal.global.profileEnabled then
+            -- If lastSelectedProfile isn't set, fall back to global profile if enabled
+            CursorGlow.db:SetProfile("Global")
+        else
+            -- Default to the current character-specific profile
+            local characterProfileName = UnitName("player") .. " - " .. GetRealmName()
+            CursorGlow.db:SetProfile(characterProfileName)
+        end
+
+        -- Apply profile settings
+        CursorGlow:ApplySettings()
+        
+        -- Manage minimap button visibility based on the profile setting
+        if CursorGlow.db.profile.minimap.hide then
+            icon:Hide("CursorGlow")
+        else
+            icon:Show("CursorGlow")
+        end
+        
     elseif event == "PLAYER_REGEN_DISABLED" or event == "PLAYER_REGEN_ENABLED" then
         UpdateAddonVisibility()
     elseif event == "ZONE_CHANGED_NEW_AREA" or event == "PLAYER_ENTERING_WORLD" then
@@ -899,6 +940,11 @@ frame:SetScript("OnEvent", function(self, event, ...)
         speed = 0
     end
 end)
+
+
+
+
+
 
 frame:RegisterEvent("ADDON_LOADED")
 frame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
@@ -1021,6 +1067,3 @@ frame:SetScript("OnUpdate", function(self, elapsed)
         prevY = cursorY
     end
 end)
-
-
-
