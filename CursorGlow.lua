@@ -1,6 +1,6 @@
 -- CursorGlow
 -- Made by Sharpedge_Gaming
--- v3.5 - 11.0.5
+-- v3.6 - 11.0.5
 
 local LibStub = LibStub or _G.LibStub
 local AceDB = LibStub:GetLibrary("AceDB-3.0")
@@ -262,6 +262,11 @@ local globalDefaults = {
     }
 }
 
+local charDefaults = {
+    char = {
+       lastSelectedProfile = nil,
+    }
+}
 
 local particles = {}
 
@@ -424,23 +429,20 @@ function CursorGlow:ApplySettings()
     end
 end
 
-
 function CursorGlow:SwitchProfile(forceGlobal, profileName)
     if profileName then
-        -- Set a specific profile by name
         self.db:SetProfile(profileName)
-        self.dbGlobal.global.lastSelectedProfile = profileName  -- Save as last-selected
+        self.dbChar.char.lastSelectedProfile = profileName  
     elseif forceGlobal or self.dbGlobal.global.profileEnabled then
         -- Set to global profile
         self.db:SetProfile("Global")
         self.dbGlobal.global.profileEnabled = true
-        self.dbGlobal.global.lastSelectedProfile = "Global"  -- Save as last-selected
     else
         -- Set to character-specific profile
         local characterProfileName = UnitName("player") .. " - " .. GetRealmName()
         self.db:SetProfile(characterProfileName)
         self.dbGlobal.global.profileEnabled = false
-        self.dbGlobal.global.lastSelectedProfile = characterProfileName  -- Save as last-selected
+        self.dbChar.char.lastSelectedProfile = characterProfileName  
     end
 
     -- Ensure all necessary defaults are applied in the selected profile
@@ -460,48 +462,13 @@ function CursorGlow:SwitchProfile(forceGlobal, profileName)
     profile.tailLength = profile.tailLength or 60
     profile.minimap = profile.minimap or { hide = false }
 
-    -- Apply the updated profile settings
     self:ApplySettings()
 end
 
-function CursorGlow:OnInitialize()
-    -- Initialize the profile-specific database with defaults
-    self.db = LibStub("AceDB-3.0"):New("CursorGlowDB", profileDefaults, true)
-    
-    -- Initialize global settings for global profile toggle
-    self.dbGlobal = LibStub("AceDB-3.0"):New("CursorGlowGlobalDB", globalDefaults, true)
-
-    -- Load last-selected profile, default to Global if enabled, or character-specific otherwise
-    if self.dbGlobal.global.lastSelectedProfile then
-        self.db:SetProfile(self.dbGlobal.global.lastSelectedProfile)
-    elseif self.dbGlobal.global.profileEnabled then
-        self.db:SetProfile("Global")
-    else
-        local characterProfileName = UnitName("player") .. " - " .. GetRealmName()
-        self.db:SetProfile(characterProfileName)
-    end
-
-    -- Register callbacks for dynamic profile changes
-    self.db.RegisterCallback(self, "OnProfileChanged", "ApplySettings")
-    self.db.RegisterCallback(self, "OnProfileCopied", "ApplySettings")
-    self.db.RegisterCallback(self, "OnProfileReset", "ApplySettings")
-    
-    -- Apply initial profile settings
+function CursorGlow:OnProfileChanged(event, db, newProfile)
+    self.dbChar.char.lastSelectedProfile = self.db:GetCurrentProfile()
     self:ApplySettings()
-
-    -- Initialize minimap button visibility
-    if minimapButton and icon then
-        icon:Register("CursorGlow", minimapButton, self.db.profile.minimap)
-    else
-        print("Error: Minimap button or LibDBIcon not properly initialized.")
-    end
-
-    -- Manage minimap button visibility based on saved settings
-    if self.db.profile.minimap and self.db.profile.minimap.hide then
-        icon:Hide("CursorGlow")
-    else
-        icon:Show("CursorGlow")
-    end
+end
 
 -- Create and register the main options
 local options = {
@@ -879,23 +846,51 @@ local options = {
     },
 }
 
--- Profile options in a separate Blizzard options panel
-local profileOptions = {
-    name = "CursorGlow Profiles",
-    type = 'group',
-    args = AceDBOptions:GetOptionsTable(CursorGlow.db).args,
-}
-
--- Register the main options (CursorGlow configuration)
-AceConfig:RegisterOptionsTable("CursorGlow", options)
-AceConfigDialog:AddToBlizOptions("CursorGlow", "CursorGlow")
-
--- Register the profile options separately under "Profiles" tab
-AceConfig:RegisterOptionsTable("CursorGlow Profiles", AceDBOptions:GetOptionsTable(CursorGlow.db))
-AceConfigDialog:AddToBlizOptions("CursorGlow Profiles", "Profiles", "CursorGlow")
-
-    -- Apply the settings for the current profile
+function CursorGlow:OnInitialize()
+    
+    self.db = LibStub("AceDB-3.0"):New("CursorGlowDB", profileDefaults)
+    self.dbChar = LibStub("AceDB-3.0"):New("CursorGlowCharDB", charDefaults)
+    
+    self.dbGlobal = LibStub("AceDB-3.0"):New("CursorGlowGlobalDB", globalDefaults)
+    
+    -- Register callbacks for dynamic profile changes
+    self.db.RegisterCallback(self, "OnProfileChanged", "OnProfileChanged")
+    self.db.RegisterCallback(self, "OnProfileCopied", "OnProfileChanged")
+    self.db.RegisterCallback(self, "OnProfileReset", "OnProfileChanged")
+   
+    if self.dbGlobal.global.profileEnabled then
+        self.db:SetProfile("Global")
+    elseif self.dbChar.char.lastSelectedProfile then
+        self.db:SetProfile(self.dbChar.char.lastSelectedProfile)
+    else
+        local characterProfileName = UnitName("player") .. " - " .. GetRealmName()
+        self.db:SetProfile(characterProfileName)
+    end
+    
     self:ApplySettings()
+    
+    if minimapButton and icon then
+        icon:Register("CursorGlow", minimapButton, self.db.profile.minimap)
+    else
+        print("Error: Minimap button or LibDBIcon not properly initialized.")
+    end
+    
+    if self.db.profile.minimap and self.db.profile.minimap.hide then
+        icon:Hide("CursorGlow")
+    else
+        icon:Show("CursorGlow")
+end
+
+    -- Register the main options
+    AceConfig:RegisterOptionsTable("CursorGlow", options)
+    AceConfigDialog:AddToBlizOptions("CursorGlow", "CursorGlow")
+    
+    -- Create the profiles options table after self.db is initialized
+    local profilesOptions = AceDBOptions:GetOptionsTable(self.db)
+    
+    -- Register the profile options separately under "Profiles" tab
+    AceConfig:RegisterOptionsTable("CursorGlow Profiles", profilesOptions)
+    AceConfigDialog:AddToBlizOptions("CursorGlow Profiles", "Profiles", "CursorGlow")
 end
 
 frame:RegisterEvent("PLAYER_REGEN_DISABLED")
@@ -908,30 +903,7 @@ function HandleCombatState()
 end
 
 frame:SetScript("OnEvent", function(self, event, ...)
-    if event == "ADDON_LOADED" and ... == "CursorGlow" then
-        -- Prioritize loading lastSelectedProfile if it exists
-        if CursorGlow.dbGlobal.global.lastSelectedProfile then
-            CursorGlow.db:SetProfile(CursorGlow.dbGlobal.global.lastSelectedProfile)
-        elseif CursorGlow.dbGlobal.global.profileEnabled then
-            -- If lastSelectedProfile isn't set, fall back to global profile if enabled
-            CursorGlow.db:SetProfile("Global")
-        else
-            -- Default to the current character-specific profile
-            local characterProfileName = UnitName("player") .. " - " .. GetRealmName()
-            CursorGlow.db:SetProfile(characterProfileName)
-        end
-
-        -- Apply profile settings
-        CursorGlow:ApplySettings()
-        
-        -- Manage minimap button visibility based on the profile setting
-        if CursorGlow.db.profile.minimap.hide then
-            icon:Hide("CursorGlow")
-        else
-            icon:Show("CursorGlow")
-        end
-        
-    elseif event == "PLAYER_REGEN_DISABLED" or event == "PLAYER_REGEN_ENABLED" then
+    if event == "PLAYER_REGEN_DISABLED" or event == "PLAYER_REGEN_ENABLED" then
         UpdateAddonVisibility()
     elseif event == "ZONE_CHANGED_NEW_AREA" or event == "PLAYER_ENTERING_WORLD" then
         UpdateTexture(CursorGlow.db.profile.texture)
@@ -941,12 +913,6 @@ frame:SetScript("OnEvent", function(self, event, ...)
     end
 end)
 
-
-
-
-
-
-frame:RegisterEvent("ADDON_LOADED")
 frame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 
