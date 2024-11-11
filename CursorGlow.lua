@@ -1,6 +1,6 @@
 -- CursorGlow
 -- Made by Sharpedge_Gaming
--- v3.7 - 11.0.5
+-- v3.8 - 11.0.5
 
 local LibStub = LibStub or _G.LibStub
 local AceDB = LibStub:GetLibrary("AceDB-3.0")
@@ -146,6 +146,7 @@ local tailSegments = {}
 local tailLength = 60  -- Adjust the length of the tail
 local tailPositions = {}  -- Stores previous cursor positions
 local tailTextures = {}   -- Stores the tail textures
+local tailPositions = {}  -- Stores previous cursor positions for each tail
 
 -- Initialize tail textures
 for i = 1, tailLength do
@@ -157,33 +158,46 @@ for i = 1, tailLength do
 end
 
 local function InitializeTailTextures()
+    -- Ensure tailTextures and tailPositions are initialized as empty tables
+    tailTextures = tailTextures or {}
+    tailPositions = tailPositions or {}
+
     -- Hide and clear existing tail textures
     for _, tailGroup in pairs(tailTextures) do
-        for _, tailTexture in ipairs(tailGroup) do
-            tailTexture:Hide()
-            tailTexture:SetTexture(nil)
+        if tailGroup then
+            for _, tailTexture in ipairs(tailGroup) do
+                if tailTexture and tailTexture.Hide then
+                    tailTexture:Hide()
+                    tailTexture:SetTexture(nil)
+                end
+            end
         end
     end
     tailTextures = {}
     tailPositions = {}
-    
+
+    -- Proceed with initializing new tail textures
     local numTails = CursorGlow.db.profile.numTails or 1
     local colorValue = colorOptions[CursorGlow.db.profile.color] or {1, 1, 1}
     local texturePath = textureOptions[CursorGlow.db.profile.texture] or textureOptions["star4"]
-    
+
     for tailIndex = 1, numTails do
         tailTextures[tailIndex] = {}
         tailPositions[tailIndex] = {}
+        
         for i = 1, CursorGlow.tailLength do
             local tailTexture = frame:CreateTexture(nil, "BACKGROUND")
             tailTexture:SetTexture(texturePath)
             tailTexture:SetBlendMode("ADD")
             tailTexture:SetSize(32, 32)
             tailTexture:SetVertexColor(colorValue[1], colorValue[2], colorValue[3], CursorGlow.db.profile.opacity)
-            tailTextures[tailIndex][i] = tailTexture
+            tailTextures[tailIndex][i] = tailTexture  -- Store the created texture
         end
     end
 end
+
+
+
 
 
 -- Function to get the default class color
@@ -201,24 +215,36 @@ end
 local function UpdateTextureColor()
     local colorValue = colorOptions[CursorGlow.db.profile.color] or {1, 1, 1}
     texture:SetVertexColor(colorValue[1], colorValue[2], colorValue[3], CursorGlow.db.profile.opacity)
+    -- Update tail textures' color
     for _, tailGroup in pairs(tailTextures) do
-        for _, tailTexture in ipairs(tailGroup) do
-            tailTexture:SetVertexColor(colorValue[1], colorValue[2], colorValue[3], CursorGlow.db.profile.opacity)
+        if tailGroup then
+            for _, tailTexture in ipairs(tailGroup) do
+                if tailTexture then
+                    tailTexture:SetVertexColor(colorValue[1], colorValue[2], colorValue[3], CursorGlow.db.profile.opacity)
+                end
+            end
         end
     end
 end
+
 
 
 local function UpdateTexture(textureKey)
     local texturePath = textureOptions[textureKey] or textureOptions["star4"]
     texture:SetTexture(texturePath)
+    -- Update tail textures' texture
     for _, tailGroup in pairs(tailTextures) do
-        for _, tailTexture in ipairs(tailGroup) do
-            tailTexture:SetTexture(texturePath)
+        if tailGroup then
+            for _, tailTexture in ipairs(tailGroup) do
+                if tailTexture then
+                    tailTexture:SetTexture(texturePath)
+                end
+            end
         end
     end
     UpdateTextureColor()
 end
+
 
 
 local function ToggleAddon(enable)
@@ -823,21 +849,27 @@ local options = {
             inline = true,
             args = {
                 enableTail = {
-                    type = 'toggle',
-                    name = L["Enable Tail Effect"],
-                    desc = L["Toggle the tail effect behind the cursor"],
-                    order = 1,
-                    get = function() return CursorGlow.db.profile.enableTail end,
-                    set = function(_, val)
-                        CursorGlow.db.profile.enableTail = val
-                        if not val then
-                            -- Hide tail textures when disabled
-                            for _, tailTexture in ipairs(tailTextures) do
-                                tailTexture:Hide()
-                            end
-                            tailPositions = {}
+    type = 'toggle',
+    name = L["Enable Tail Effect"],
+    desc = L["Toggle the tail effect behind the cursor"],
+    order = 1,
+    get = function() return CursorGlow.db.profile.enableTail end,
+    set = function(_, val)
+        CursorGlow.db.profile.enableTail = val
+        if not val then
+            -- Hide tail textures when disabled
+            for _, tailGroup in pairs(tailTextures or {}) do
+                if tailGroup then
+                    for _, tailTexture in ipairs(tailGroup) do
+                        if tailTexture and tailTexture.Hide then
+                            tailTexture:Hide()
                         end
-                    end,
+                    end
+                end
+            end
+            tailPositions = {}
+        end
+    end,
                 },
                 tailLength = {
     type = 'range',
@@ -956,16 +988,31 @@ frame:SetScript("OnEvent", function(self, event, ...)
     end
 end)
 
+function CursorGlow:DisableTailEffect()
+    if CursorGlow.db.profile.enableTail then
+        -- Only attempt to hide textures if the tail effect is enabled
+        for _, tailGroup in pairs(tailTextures or {}) do
+            if tailGroup then
+                for _, tailTexture in ipairs(tailGroup or {}) do
+                    if tailTexture and tailTexture.Hide then
+                        tailTexture:Hide()
+                    end
+                end
+            end
+        end
+        tailPositions = {}
+    end
+end
+
+
 frame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 
--- OnUpdate function to handle the tail effect
 frame:SetScript("OnUpdate", function(self, elapsed)
     local size = math.max(CursorGlow.db.profile.minSize, CursorGlow.db.profile.maxSize)
-    local opacity = CursorGlow.db.profile.opacity or 1  -- Set default opacity if nil
+    local opacity = CursorGlow.db.profile.opacity or 1
 
     if CursorGlow.db.profile.operationMode == "enabledAlwaysOnCursor" then
-        -- Code for always-on-cursor mode
         local scale = UIParent:GetEffectiveScale()
         local cursorX, cursorY = GetCursorPosition()
         texture:SetHeight(size)
@@ -973,9 +1020,9 @@ frame:SetScript("OnUpdate", function(self, elapsed)
         texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cursorX / scale, cursorY / scale)
         texture:Show()
     else
-        -- Initialization and calculation code
-        CursorGlow.db.profile.maxSize = CursorGlow.db.profile.maxSize or 128
-        CursorGlow.db.profile.minSize = CursorGlow.db.profile.minSize or 16
+        CursorGlow.tailLength = tonumber(CursorGlow.tailLength) or 60
+        local numTails = tonumber(CursorGlow.db.profile.numTails) or 1
+        local tailSpacing = tonumber(CursorGlow.db.profile.tailSpacing) or 10
 
         local cursorX, cursorY = GetCursorPosition()
         prevX = prevX or cursorX
@@ -985,30 +1032,24 @@ frame:SetScript("OnUpdate", function(self, elapsed)
         local distance = math.sqrt(dX * dX + dY * dY)
 
         if elapsed == 0 then
-            elapsed = 0.0001
-        end
+    elapsed = 0.0001
+end
 
-        local decayFactor = 2048 ^ -elapsed
-        speed = math.min(decayFactor * speed + (1 - decayFactor) * distance / elapsed, 1024)
+local decayFactor = 1024 ^ -elapsed  -- Reduced from 2048 to 1024 for slower decay
+speed = math.min(decayFactor * speed + (0.5 * (1 - decayFactor) * distance / elapsed), 512)  -- Slower speed buildup
+
 
         size = math.max(math.min(speed / 6, CursorGlow.db.profile.maxSize), CursorGlow.db.profile.minSize)
         local scale = UIParent:GetEffectiveScale()
 
         if distance > 0 then
-            -- Cursor is moving
-            -- Reset stationary time
             stationaryTime = 0
-
-            -- Existing movement code
             texture:SetHeight(size)
             texture:SetWidth(size)
             texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", (cursorX + 0.5 * dX) / scale, (cursorY + 0.5 * dY) / scale)
             texture:Show()
 
             if CursorGlow.db.profile.enableTail then
-                local numTails = CursorGlow.db.profile.numTails or 1
-                local tailSpacing = CursorGlow.db.profile.tailSpacing or 10
-
                 for tailIndex = 1, numTails do
                     local offset = (tailIndex - (numTails + 1) / 2) * tailSpacing * scale
                     local cursorPos = { x = (cursorX + offset) / scale, y = cursorY / scale }
@@ -1019,66 +1060,65 @@ frame:SetScript("OnUpdate", function(self, elapsed)
                         table.remove(tailPositions[tailIndex])
                     end
 
+                    tailTextures[tailIndex] = tailTextures[tailIndex] or {}
                     for i, tailTexture in ipairs(tailTextures[tailIndex]) do
                         local pos = tailPositions[tailIndex][i]
-                        if pos then
+                        if pos and tailTexture then
                             tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)
                             local alpha = (CursorGlow.tailLength - i + 1) / CursorGlow.tailLength
                             tailTexture:SetAlpha(alpha * opacity)
-                            local tailSize = size * alpha
-                            tailTexture:SetSize(tailSize, tailSize)
+                            tailTexture:SetSize(size * alpha, size * alpha)
                             tailTexture:Show()
-                        else
+                        elseif tailTexture then
                             tailTexture:Hide()
                         end
                     end
                 end
             else
-                -- Tail effect disabled
                 for _, tailGroup in pairs(tailTextures) do
-                    for _, tailTexture in ipairs(tailGroup) do
-                        tailTexture:Hide()
+                    for _, tailTexture in ipairs(tailGroup or {}) do
+                        if tailTexture then
+                            tailTexture:Hide()
+                        end
                     end
                 end
                 tailPositions = {}
             end
         else
-            -- Cursor is stationary
             texture:Hide()
             stationaryTime = stationaryTime + elapsed
 
             if CursorGlow.db.profile.enableTail then
                 local numTails = CursorGlow.db.profile.numTails or 1
 
-                if stationaryTime >= 1 then  -- Adjust duration as needed
+                if stationaryTime >= 1 then
                     tailPositions = {}
                 else
                     for tailIndex = 1, numTails do
-                        for i, tailTexture in ipairs(tailTextures[tailIndex]) do
+                        for i, tailTexture in ipairs(tailTextures[tailIndex] or {}) do
                             local pos = tailPositions[tailIndex] and tailPositions[tailIndex][i]
-                            if pos then
+                            if pos and tailTexture then
                                 tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)
-                                -- Calculate alpha based on stationary time
                                 local alpha = ((CursorGlow.tailLength - i + 1) / CursorGlow.tailLength) * math.max(1 - stationaryTime, 0)
                                 tailTexture:SetAlpha(alpha * opacity)
-                                local tailSize = size * alpha
-                                tailTexture:SetSize(tailSize, tailSize)
+                                tailTexture:SetSize(size * alpha, size * alpha)
                                 if alpha > 0 then
                                     tailTexture:Show()
                                 else
                                     tailTexture:Hide()
                                 end
-                            else
+                            elseif tailTexture then
                                 tailTexture:Hide()
                             end
                         end
                     end
                 end
             else
-                -- Tail effect disabled
                 for _, tailGroup in pairs(tailTextures) do
-                    for _, tailTexture in ipairs(tailGroup) do
-                        tailTexture:Hide()
+                    for _, tailTexture in ipairs(tailGroup or {}) do
+                        if tailTexture then
+                            tailTexture:Hide()
+                        end
                     end
                 end
                 tailPositions = {}
@@ -1089,4 +1129,7 @@ frame:SetScript("OnUpdate", function(self, elapsed)
         prevY = cursorY
     end
 end)
+
+
+
 
