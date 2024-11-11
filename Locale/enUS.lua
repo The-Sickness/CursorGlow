@@ -46,7 +46,10 @@ L["Tail Length"] = "Tail Length"
 L["Adjust the length of the cursor tail"] = "Adjust the length of the cursor tail"
 L["Enable Global Profile"] = "Enable Global Profile"
 L["Use the same settings for all characters"] = "Use the same settings for all characters"
-
+L["Number of Tails"] = "Number of Tails"
+L["Select the number of tails"] = "Select the number of tails"
+L["Tail Spacing"] = "Tail Spacing"
+L["Adjust the spacing between multiple tails"] = "Adjust the spacing between multiple tails"
 
 
 -- Add all the color names
