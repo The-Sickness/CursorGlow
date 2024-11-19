@@ -1057,78 +1057,136 @@ end
 frame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 
--- Modified OnUpdate function to include disappearing and reappearing pulse effect
+-- Modified OnUpdate function to include pulse effect in all operation modes
 frame:SetScript("OnUpdate", function(self, elapsed)
     local profile = CursorGlow.db.profile
-    local size = math.max(profile.minSize, profile.maxSize)
     local opacity = profile.opacity or 1
 
+    -- Variables to track cursor position and movement
+    local cursorX, cursorY = GetCursorPosition()
+    prevX = prevX or cursorX
+    prevY = prevY or cursorY
+
+    local dX, dY = cursorX - prevX, cursorY - prevY
+    local distance = math.sqrt(dX * dX + dY * dY)
+
+    if elapsed == 0 then
+        elapsed = 0.0001
+    end
+
+    local decayFactor = 2048 ^ -elapsed
+    speed = math.min(decayFactor * speed + (1 - decayFactor) * distance / elapsed, 1024)
+
+    local scale = UIParent:GetEffectiveScale()
+
+    -- Update stationary time
+    if distance > 0 then
+        stationaryTime = 0
+        pulseElapsedTime = 0  -- Reset pulse timer when moving
+    else
+        stationaryTime = stationaryTime + elapsed
+    end
+
+    -- Determine size based on movement or pulse effect
+    local size
+    if distance > 0 then
+        size = math.max(math.min(speed / 6, profile.maxSize), profile.minSize)
+    elseif profile.pulseEnabled and stationaryTime >= 0.5 then
+        pulseElapsedTime = pulseElapsedTime + elapsed
+        local pulseSpeed = profile.pulseSpeed or 1
+        local pulseProgress = (math.sin(pulseElapsedTime * pulseSpeed * math.pi * 2) + 1) / 2
+
+        -- Calculate pulse size and alpha
+        size = profile.pulseMinSize + (profile.pulseMaxSize - profile.pulseMinSize) * pulseProgress
+        local pulseAlpha = opacity * pulseProgress
+        texture:SetAlpha(pulseAlpha)
+    else
+        size = profile.minSize
+        texture:SetAlpha(opacity)
+    end
+
+    -- Update texture size and position
+    texture:SetHeight(size)
+    texture:SetWidth(size)
+    texture:SetAlpha(texture:GetAlpha() or opacity)
+
+    -- Position the texture based on operation mode
     if profile.operationMode == "enabledAlwaysOnCursor" then
-        local scale = UIParent:GetEffectiveScale()
-        local cursorX, cursorY = GetCursorPosition()
-        texture:SetHeight(size)
-        texture:SetWidth(size)
         texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cursorX / scale, cursorY / scale)
         texture:Show()
-    else
-        CursorGlow.tailLength = tonumber(CursorGlow.tailLength) or 60
+    elseif profile.operationMode == "enabledInCombat" then
+        if UnitAffectingCombat("player") then
+            if distance > 0 or (profile.pulseEnabled and stationaryTime >= 0.5) then
+                texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cursorX / scale, cursorY / scale)
+                texture:Show()
+            else
+                texture:Hide()
+            end
+        else
+            texture:Hide()
+        end
+    else -- "enabledAlways"
+        if distance > 0 or (profile.pulseEnabled and stationaryTime >= 0.5) then
+            texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cursorX / scale, cursorY / scale)
+            texture:Show()
+        else
+            texture:Hide()
+        end
+    end
+
+    -- Handle tail effect
+    if profile.enableTail then
         local numTails = tonumber(profile.numTails) or 1
         local tailSpacing = tonumber(profile.tailSpacing) or 10
-
-        local cursorX, cursorY = GetCursorPosition()
-        prevX = prevX or cursorX
-        prevY = prevY or cursorY
-
-        local dX, dY = cursorX - prevX, cursorY - prevY
-        local distance = math.sqrt(dX * dX + dY * dY)
-
-        if elapsed == 0 then
-            elapsed = 0.0001
-        end
-
-        local decayFactor = 2048 ^ -elapsed
-        speed = math.min(decayFactor * speed + (1 - decayFactor) * distance / elapsed, 1024)
-
-        local scale = UIParent:GetEffectiveScale()
+        CursorGlow.tailLength = tonumber(CursorGlow.tailLength) or 60
 
         if distance > 0 then
-            stationaryTime = 0
-            pulseElapsedTime = 0  
+            for tailIndex = 1, numTails do
+                local offset = (tailIndex - (numTails + 1) / 2) * tailSpacing * scale
+                local cursorPos = { x = (cursorX + offset) / scale, y = cursorY / scale }
 
-            size = math.max(math.min(speed / 6, profile.maxSize), profile.minSize)
-            texture:SetHeight(size)
-            texture:SetWidth(size)
-            texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", (cursorX + 0.5 * dX) / scale, (cursorY + 0.5 * dY) / scale)
-            texture:SetAlpha(opacity)
-            texture:Show()
+                tailPositions[tailIndex] = tailPositions[tailIndex] or {}
+                table.insert(tailPositions[tailIndex], 1, cursorPos)
+                if #tailPositions[tailIndex] > CursorGlow.tailLength then
+                    table.remove(tailPositions[tailIndex])
+                end
 
-            -- Tail effect when moving
-            if profile.enableTail then
-                for tailIndex = 1, numTails do
-                    local offset = (tailIndex - (numTails + 1) / 2) * tailSpacing * scale
-                    local cursorPos = { x = (cursorX + offset) / scale, y = cursorY / scale }
-
-                    tailPositions[tailIndex] = tailPositions[tailIndex] or {}
-                    table.insert(tailPositions[tailIndex], 1, cursorPos)
-                    if #tailPositions[tailIndex] > CursorGlow.tailLength then
-                        table.remove(tailPositions[tailIndex])
+                tailTextures[tailIndex] = tailTextures[tailIndex] or {}
+                for i, tailTexture in ipairs(tailTextures[tailIndex]) do
+                    local pos = tailPositions[tailIndex][i]
+                    if pos and tailTexture then
+                        tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)
+                        local alpha = (CursorGlow.tailLength - i + 1) / CursorGlow.tailLength
+                        tailTexture:SetAlpha(alpha * opacity)
+                        tailTexture:SetSize(size, size)
+                        tailTexture:Show()
+                    elseif tailTexture then
+                        tailTexture:Hide()
                     end
-
-                    tailTextures[tailIndex] = tailTextures[tailIndex] or {}
-                    for i, tailTexture in ipairs(tailTextures[tailIndex]) do
-                        local pos = tailPositions[tailIndex][i]
+                end
+            end
+        else
+            if stationaryTime < 1 then
+                for tailIndex = 1, numTails do
+                    for i, tailTexture in ipairs(tailTextures[tailIndex] or {}) do
+                        local pos = tailPositions[tailIndex] and tailPositions[tailIndex][i]
                         if pos and tailTexture then
                             tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)
-                            local alpha = (CursorGlow.tailLength - i + 1) / CursorGlow.tailLength
+                            local alpha = ((CursorGlow.tailLength - i + 1) / CursorGlow.tailLength) * math.max(1 - stationaryTime, 0)
                             tailTexture:SetAlpha(alpha * opacity)
-                            tailTexture:SetSize(size, size)
-                            tailTexture:Show()
+                            tailTexture:SetSize(size * alpha, size * alpha)
+                            if alpha > 0 then
+                                tailTexture:Show()
+                            else
+                                tailTexture:Hide()
+                            end
                         elseif tailTexture then
                             tailTexture:Hide()
                         end
                     end
                 end
             else
+                tailPositions = {}
                 for _, tailGroup in pairs(tailTextures) do
                     for _, tailTexture in ipairs(tailGroup or {}) do
                         if tailTexture then
@@ -1136,75 +1194,22 @@ frame:SetScript("OnUpdate", function(self, elapsed)
                         end
                     end
                 end
-                tailPositions = {}
-            end
-        else
-            stationaryTime = stationaryTime + elapsed
-
-            if profile.pulseEnabled then
-                -- Start pulsing after being stationary for 0.5 seconds
-                if stationaryTime >= 0.5 then
-                    pulseElapsedTime = pulseElapsedTime + elapsed
-                    local pulseSpeed = profile.pulseSpeed or 1
-                    local pulseProgress = (math.sin(pulseElapsedTime * pulseSpeed * math.pi * 2) + 1) / 2
-
-                    -- Calculate pulse size
-                    local pulseSize = profile.pulseMinSize + (profile.pulseMaxSize - profile.pulseMinSize) * pulseProgress
-                    texture:SetHeight(pulseSize)
-                    texture:SetWidth(pulseSize)
-
-                    -- Calculate pulse opacity (make it disappear and reappear)
-                    local pulseAlpha = opacity * pulseProgress
-                    texture:SetAlpha(pulseAlpha)
-
-                    texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cursorX / scale, cursorY / scale)
-                    texture:Show()
-                else
-                    texture:Hide()
-                end
-            else
-                texture:Hide()
-            end
-
-            if profile.enableTail then
-                local numTails = profile.numTails or 1
-
-                if stationaryTime >= 1 then
-                    tailPositions = {}
-                else
-                    for tailIndex = 1, numTails do
-                        for i, tailTexture in ipairs(tailTextures[tailIndex] or {}) do
-                            local pos = tailPositions[tailIndex] and tailPositions[tailIndex][i]
-                            if pos and tailTexture then
-                                tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)
-                                local alpha = ((CursorGlow.tailLength - i + 1) / CursorGlow.tailLength) * math.max(1 - stationaryTime, 0)
-                                tailTexture:SetAlpha(alpha * opacity)
-                                tailTexture:SetSize(size * alpha, size * alpha)
-                                if alpha > 0 then
-                                    tailTexture:Show()
-                                else
-                                    tailTexture:Hide()
-                                end
-                            elseif tailTexture then
-                                tailTexture:Hide()
-                            end
-                        end
-                    end
-                end
-            else
-                for _, tailGroup in pairs(tailTextures) do
-                    for _, tailTexture in ipairs(tailGroup or {}) do
-                        if tailTexture then
-                            tailTexture:Hide()
-                        end
-                    end
-                end
-                tailPositions = {}
             end
         end
-
-        prevX = cursorX
-        prevY = cursorY
+    else
+        -- Hide tail textures if tail effect is disabled
+        for _, tailGroup in pairs(tailTextures) do
+            for _, tailTexture in ipairs(tailGroup or {}) do
+                if tailTexture then
+                    tailTexture:Hide()
+                end
+            end
+        end
+        tailPositions = {}
     end
+
+    prevX = cursorX
+    prevY = cursorY
 end)
+
 
