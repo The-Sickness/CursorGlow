@@ -1,6 +1,6 @@
 -- CursorGlow
 -- Made by Sharpedge_Gaming
--- v3.8 - 11.0.5
+-- v3.9 - 11.0.5
 
 local LibStub = LibStub or _G.LibStub
 local AceDB = LibStub:GetLibrary("AceDB-3.0")
@@ -17,6 +17,7 @@ local L = LibStub("AceLocale-3.0"):GetLocale("CursorGlow", true)
 local CursorGlow = AceAddon:NewAddon("CursorGlow", "AceEvent-3.0", "AceConsole-3.0")
 local speed = 0
 local stationaryTime = 0
+local pulseElapsedTime = 0  
 
 -- Define texture options
 local textureOptions = {
@@ -42,6 +43,7 @@ local textureOptions = {
     ["ring20"] = "Interface\\Addons\\CursorGlow\\Textures\\Test16.png",
     ["ring21"] = "Interface\\Addons\\CursorGlow\\Textures\\Test17.png",
     ["ring22"] = "Interface\\Addons\\CursorGlow\\Textures\\Test18.png",
+	["ring23"] = "Interface\\Addons\\CursorGlow\\Textures\\Burst.png",
 }
 
 local orderedKeys = {
@@ -66,7 +68,8 @@ local orderedKeys = {
     "ring19",
     "ring20",
     "ring21",
-    "ring22",
+    "ring22", 
+	"ring23",
 }
 
 local displayNames = {
@@ -92,6 +95,7 @@ local displayNames = {
     ring20 = 'Swirl2',
     ring21 = 'Horde',
     ring22 = 'Alliance',
+	ring23 = 'Burst',
 }
 
 local values = {}
@@ -196,10 +200,6 @@ local function InitializeTailTextures()
     end
 end
 
-
-
-
-
 -- Function to get the default class color
 local function GetDefaultClassColor()
     local _, class = UnitClass("player")
@@ -227,8 +227,6 @@ local function UpdateTextureColor()
     end
 end
 
-
-
 local function UpdateTexture(textureKey)
     local texturePath = textureOptions[textureKey] or textureOptions["star4"]
     texture:SetTexture(texturePath)
@@ -244,8 +242,6 @@ local function UpdateTexture(textureKey)
     end
     UpdateTextureColor()
 end
-
-
 
 local function ToggleAddon(enable)
     if not CursorGlow.db.profile.combatOnly or UnitAffectingCombat("player") then
@@ -293,6 +289,10 @@ local profileDefaults = {
 		numTails = 1,          
         tailSpacing = 10,      
         minimap = { hide = false },
+		pulseEnabled = false,
+        pulseMinSize = 50,
+        pulseMaxSize = 100,
+        pulseSpeed = 1,  
     }
 }
 
@@ -454,11 +454,17 @@ function CursorGlow:ApplySettings()
     profile.minSize = profile.minSize or 16  -- Fallback to default if nil
     profile.maxSize = profile.maxSize or 175  -- Fallback to default if nil
 
+    -- Ensure pulse settings are initialized
+    profile.pulseEnabled = profile.pulseEnabled or false
+    profile.pulseMinSize = profile.pulseMinSize or 50
+    profile.pulseMaxSize = profile.pulseMaxSize or 100
+    profile.pulseSpeed = profile.pulseSpeed or 1
+
     -- Apply texture, color, and other settings based on the current profile
     UpdateTexture(profile.texture)
     UpdateTextureColor(profile.color)
     UpdateAddonVisibility()
-      CursorGlow.tailLength = CursorGlow.db.profile.tailLength or 60
+    CursorGlow.tailLength = CursorGlow.db.profile.tailLength or 60
     InitializeTailTextures()
 
     -- Manage minimap button visibility based on profile settings
@@ -501,6 +507,11 @@ function CursorGlow:SwitchProfile(forceGlobal, profileName)
     profile.enableTail = profile.enableTail or false
     profile.tailLength = profile.tailLength or 60
     profile.minimap = profile.minimap or { hide = false }
+    -- Ensure pulse settings are initialized
+    profile.pulseEnabled = profile.pulseEnabled or false
+    profile.pulseMinSize = profile.pulseMinSize or 50
+    profile.pulseMaxSize = profile.pulseMaxSize or 100
+    profile.pulseSpeed = profile.pulseSpeed or 1
 
     self:ApplySettings()
 end
@@ -528,24 +539,22 @@ local options = {
             inline = true,
             args = {
                 globalProfileEnabled = {
-    type = 'toggle',
-    name = L["Enable Global Profile"],
-    desc = L["Use the same settings for all characters"],
-    order = 1,
-    get = function() return CursorGlow.dbGlobal.global.profileEnabled end,
-    set = function(_, val)
-        CursorGlow.dbGlobal.global.profileEnabled = val
-        if val then
-            CursorGlow.db:SetProfile("Global")
-        else
-            local characterProfileName = UnitName("player") .. " - " .. GetRealmName()
-            CursorGlow.db:SetProfile(characterProfileName)
-        end
-        CursorGlow:ApplySettings()
-    end,
-
-},
-
+                    type = 'toggle',
+                    name = L["Enable Global Profile"],
+                    desc = L["Use the same settings for all characters"],
+                    order = 1,
+                    get = function() return CursorGlow.dbGlobal.global.profileEnabled end,
+                    set = function(_, val)
+                        CursorGlow.dbGlobal.global.profileEnabled = val
+                        if val then
+                            CursorGlow.db:SetProfile("Global")
+                        else
+                            local characterProfileName = UnitName("player") .. " - " .. GetRealmName()
+                            CursorGlow.db:SetProfile(characterProfileName)
+                        end
+                        CursorGlow:ApplySettings()
+                    end,
+                },
                 operationMode = {
                     type = 'select',
                     name = L["Operation Mode"],
@@ -562,13 +571,11 @@ local options = {
                         UpdateAddonVisibility()
                     end,
                 },
-
-                -- Show Minimap Icon
                 showMinimapIcon = {
                     type = 'toggle',
                     name = L["Show Minimap Icon"],
                     desc = L["Show or hide the minimap icon"],
-                    order = 2,
+                    order = 3,
                     get = function() return not CursorGlow.db.profile.minimap.hide end,
                     set = function(_, val)
                         CursorGlow.db.profile.minimap.hide = not val
@@ -579,12 +586,10 @@ local options = {
                         end
                     end,
                 },
-
-                -- Spacer
                 spacerGeneral1 = {
                     type = 'description',
                     name = " ",  -- Blank spacer for separation
-                    order = 3,
+                    order = 4,
                 },
             },
         },
@@ -601,7 +606,6 @@ local options = {
             order = 11,
             inline = true,
             args = {
-                -- Enable/Disable Explosion Effect
                 enableExplosion = {
                     type = 'toggle',
                     name = L["Enable Explosion Effect"],
@@ -612,31 +616,25 @@ local options = {
                         CursorGlow.db.profile.enableExplosion = val
                     end,
                 },
-
-                -- Explosion Color
                 explosionColor = {
-    type = 'color',
-    name = L["Explosion Color"],
-    desc = L["Pick a color for the explosion effect"],
-    order = 2,
-    get = function()
-        local color = CursorGlow.db.profile.explosionColor
-        return unpack(color or {1, 1, 1}) -- Use a default color if explosionColor is nil
-    end,
-    set = function(_, r, g, b)
-        CursorGlow.db.profile.explosionColor = {r, g, b}
-    end,
-    disabled = function() return not CursorGlow.db.profile.enableExplosion end,
+                    type = 'color',
+                    name = L["Explosion Color"],
+                    desc = L["Pick a color for the explosion effect"],
+                    order = 2,
+                    get = function()
+                        local color = CursorGlow.db.profile.explosionColor
+                        return unpack(color or {1, 1, 1})
+                    end,
+                    set = function(_, r, g, b)
+                        CursorGlow.db.profile.explosionColor = {r, g, b}
+                    end,
+                    disabled = function() return not CursorGlow.db.profile.enableExplosion end,
                 },
-
-                -- Spacer
                 spacerExplosion1 = {
                     type = 'description',
                     name = " ",  -- Blank spacer for separation
                     order = 3,
                 },
-
-                -- Explosion Size
                 explosionSize = {
                     type = 'range',
                     name = L["Explosion Size"],
@@ -649,9 +647,8 @@ local options = {
                     set = function(_, val)
                         CursorGlow.db.profile.explosionSize = val
                     end,
+                    disabled = function() return not CursorGlow.db.profile.enableExplosion end,
                 },
-
-                -- Explosion Texture Size
                 explosionTextureSize = {
                     type = 'range',
                     name = L["Explosion Texture Size"],
@@ -667,8 +664,6 @@ local options = {
                     end,
                     disabled = function() return not CursorGlow.db.profile.enableExplosion end,
                 },
-
-                -- Explosion Texture Selection
                 explosionTexture = {
                     type = 'select',
                     name = L["Explosion Texture"],
@@ -697,12 +692,14 @@ local options = {
                         ring20 = "Swirl 2",
                         ring21 = "Horde",
                         ring22 = "Alliance",
+                        ring23 = "Burst",
                     },
                     get = function() return CursorGlow.db.profile.explosionTexture end,
                     set = function(_, val)
                         CursorGlow.db.profile.explosionTexture = val
-                        UpdateExplosionTexture(val)  -- Update the texture when the user selects one
+                        UpdateExplosionTexture(val)
                     end,
+                    disabled = function() return not CursorGlow.db.profile.enableExplosion end,
                 },
             },
         },
@@ -719,7 +716,6 @@ local options = {
             order = 21,
             inline = true,
             args = {
-                -- Texture Selection
                 texture = {
                     type = 'select',
                     name = L["Texture"],
@@ -727,61 +723,56 @@ local options = {
                     order = 1,
                     values = values,
                     get = function() return CursorGlow.db.profile.texture end,
-    set = function(_, val)
-        CursorGlow.db.profile.texture = val
-        UpdateTexture(val)
-        InitializeTailTextures()  -- Re-initialize tail textures with new texture
-    end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.texture = val
+                        UpdateTexture(val)
+                        InitializeTailTextures()
+                    end,
                 },
-
-                -- Texture Color
                 color = {
                     type = 'select',
                     name = L["Color"],
                     desc = L["Select the color for the texture"],
                     order = 2,
                     values = {
-    red = L["Red"],
-    green = L["Green"],
-    blue = L["Blue"],
-    purple = L["Purple"],
-    white = L["White"],
-    pink = L["Pink"],
-    orange = L["Orange"],
-    cyan = L["Cyan"],
-    yellow = L["Yellow"],
-    gray = L["Gray"],
-    gold = L["Gold"],
-    teal = L["Teal"],
-    magenta = L["Magenta"],
-    lime = L["Lime"],
-    olive = L["Olive"],
-    navy = L["Navy"],
-    -- WoW Class Colors
-    warrior = L["Warrior"],
-    paladin = L["Paladin"],
-    hunter = L["Hunter"],
-    rogue = L["Rogue"],
-    priest = L["Priest"],
-    deathknight = L["Death Knight"],
-    shaman = L["Shaman"],
-    mage = L["Mage"],
-    warlock = L["Warlock"],
-    monk = L["Monk"],
-    druid = L["Druid"],
-    demonhunter = L["Demon Hunter"],
-    evoker = L["Evoker"]
-},
-
+                        red = L["Red"],
+                        green = L["Green"],
+                        blue = L["Blue"],
+                        purple = L["Purple"],
+                        white = L["White"],
+                        pink = L["Pink"],
+                        orange = L["Orange"],
+                        cyan = L["Cyan"],
+                        yellow = L["Yellow"],
+                        gray = L["Gray"],
+                        gold = L["Gold"],
+                        teal = L["Teal"],
+                        magenta = L["Magenta"],
+                        lime = L["Lime"],
+                        olive = L["Olive"],
+                        navy = L["Navy"],
+                        -- WoW Class Colors
+                        warrior = L["Warrior"],
+                        paladin = L["Paladin"],
+                        hunter = L["Hunter"],
+                        rogue = L["Rogue"],
+                        priest = L["Priest"],
+                        deathknight = L["Death Knight"],
+                        shaman = L["Shaman"],
+                        mage = L["Mage"],
+                        warlock = L["Warlock"],
+                        monk = L["Monk"],
+                        druid = L["Druid"],
+                        demonhunter = L["Demon Hunter"],
+                        evoker = L["Evoker"],
+                    },
                     get = function() return CursorGlow.db.profile.color end,
-    set = function(_, val)
-        CursorGlow.db.profile.color = val
-        UpdateTextureColor()
-        InitializeTailTextures()  -- Re-initialize tail textures with new color
-    end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.color = val
+                        UpdateTextureColor()
+                        InitializeTailTextures()
+                    end,
                 },
-
-                -- Opacity Adjustment
                 opacity = {
                     type = 'range',
                     name = L["Opacity"],
@@ -796,15 +787,11 @@ local options = {
                         UpdateTextureColor(CursorGlow.db.profile.color)
                     end,
                 },
-
-                -- Spacer
                 spacerAppearance1 = {
                     type = 'description',
                     name = " ",  -- Blank spacer for separation
                     order = 4,
                 },
-
-                -- Minimum Size
                 minSize = {
                     type = 'range',
                     name = L["Minimum Size"],
@@ -818,8 +805,6 @@ local options = {
                         CursorGlow.db.profile.minSize = val
                     end,
                 },
-
-                -- Maximum Size
                 maxSize = {
                     type = 'range',
                     name = L["Maximum Size"],
@@ -849,72 +834,139 @@ local options = {
             inline = true,
             args = {
                 enableTail = {
-    type = 'toggle',
-    name = L["Enable Tail Effect"],
-    desc = L["Toggle the tail effect behind the cursor"],
-    order = 1,
-    get = function() return CursorGlow.db.profile.enableTail end,
-    set = function(_, val)
-        CursorGlow.db.profile.enableTail = val
-        if not val then
-            -- Hide tail textures when disabled
-            for _, tailGroup in pairs(tailTextures or {}) do
-                if tailGroup then
-                    for _, tailTexture in ipairs(tailGroup) do
-                        if tailTexture and tailTexture.Hide then
-                            tailTexture:Hide()
+                    type = 'toggle',
+                    name = L["Enable Tail Effect"],
+                    desc = L["Toggle the tail effect behind the cursor"],
+                    order = 1,
+                    get = function() return CursorGlow.db.profile.enableTail end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.enableTail = val
+                        if not val then
+                            -- Hide tail textures when disabled
+                            for _, tailGroup in pairs(tailTextures or {}) do
+                                if tailGroup then
+                                    for _, tailTexture in ipairs(tailGroup) do
+                                        if tailTexture and tailTexture.Hide then
+                                            tailTexture:Hide()
+                                        end
+                                    end
+                                end
+                            end
+                            tailPositions = {}
                         end
-                    end
-                end
-            end
-            tailPositions = {}
-        end
-    end,
+                    end,
                 },
                 tailLength = {
-    type = 'range',
-    name = L["Tail Length"],
-    desc = L["Adjust the length of the cursor tail"],
-    order = 2,
-    min = 10,
-    max = 80,
-    step = 1,
-    get = function() return CursorGlow.db.profile.tailLength end,
-    set = function(_, val)
-        CursorGlow.db.profile.tailLength = val
-        CursorGlow.tailLength = val
-        InitializeTailTextures()
-    end,
-    disabled = function() return not CursorGlow.db.profile.enableTail end,
-	},
-	numTails = {
-    type = 'range',
-    name = L["Number of Tails"],
-    desc = L["Select the number of tails"],
-    order = 3,
-    min = 1,
-    max = 5,  -- Set a reasonable maximum
-    step = 1,
-    get = function() return CursorGlow.db.profile.numTails or 1 end,
-    set = function(_, val)
-        CursorGlow.db.profile.numTails = val
-        InitializeTailTextures()
-    end,
-    disabled = function() return not CursorGlow.db.profile.enableTail end,
-},
-tailSpacing = {
-    type = 'range',
-    name = L["Tail Spacing"],
-    desc = L["Adjust the spacing between multiple tails"],
-    order = 4,
-    min = 0,
-    max = 50,
-    step = 1,
-    get = function() return CursorGlow.db.profile.tailSpacing or 10 end,
-    set = function(_, val)
-        CursorGlow.db.profile.tailSpacing = val
-    end,
-    disabled = function() return not CursorGlow.db.profile.enableTail end,
+                    type = 'range',
+                    name = L["Tail Length"],
+                    desc = L["Adjust the length of the cursor tail"],
+                    order = 2,
+                    min = 10,
+                    max = 80,
+                    step = 1,
+                    get = function() return CursorGlow.db.profile.tailLength end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.tailLength = val
+                        CursorGlow.tailLength = val
+                        InitializeTailTextures()
+                    end,
+                    disabled = function() return not CursorGlow.db.profile.enableTail end,
+                },
+                numTails = {
+                    type = 'range',
+                    name = L["Number of Tails"],
+                    desc = L["Select the number of tails"],
+                    order = 3,
+                    min = 1,
+                    max = 5,
+                    step = 1,
+                    get = function() return CursorGlow.db.profile.numTails or 1 end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.numTails = val
+                        InitializeTailTextures()
+                    end,
+                    disabled = function() return not CursorGlow.db.profile.enableTail end,
+                },
+                tailSpacing = {
+                    type = 'range',
+                    name = L["Tail Spacing"],
+                    desc = L["Adjust the spacing between multiple tails"],
+                    order = 4,
+                    min = 0,
+                    max = 50,
+                    step = 1,
+                    get = function() return CursorGlow.db.profile.tailSpacing or 10 end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.tailSpacing = val
+                    end,
+                    disabled = function() return not CursorGlow.db.profile.enableTail end,
+                },
+            },
+        },
+
+        -- Pulse Effect Settings Header
+        pulseHeader = {
+            type = 'header',
+            name = L["Pulse Effect Settings"],
+            order = 40,
+        },
+        pulseSettings = {
+            type = 'group',
+            name = L["Pulse Effect"],
+            order = 41,
+            inline = true,
+            args = {
+                pulseEnabled = {
+                    type = 'toggle',
+                    name = L["Enable Pulse Effect"],
+                    desc = L["Toggle the pulsing effect when cursor is stationary"],
+                    order = 1,
+                    get = function() return CursorGlow.db.profile.pulseEnabled end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.pulseEnabled = val
+                    end,
+                },
+                pulseMinSize = {
+                    type = 'range',
+                    name = L["Pulse Minimum Size"],
+                    desc = L["Set the minimum size of the pulse effect"],
+                    order = 2,
+                    min = 10,
+                    max = 150,
+                    step = 1,
+                    get = function() return CursorGlow.db.profile.pulseMinSize end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.pulseMinSize = val
+                    end,
+                    disabled = function() return not CursorGlow.db.profile.pulseEnabled end,
+                },
+                pulseMaxSize = {
+                    type = 'range',
+                    name = L["Pulse Maximum Size"],
+                    desc = L["Set the maximum size of the pulse effect"],
+                    order = 3,
+                    min = 20,
+                    max = 200,
+                    step = 1,
+                    get = function() return CursorGlow.db.profile.pulseMaxSize end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.pulseMaxSize = val
+                    end,
+                    disabled = function() return not CursorGlow.db.profile.pulseEnabled end,
+                },
+                pulseSpeed = {
+                    type = 'range',
+                    name = L["Pulse Speed"],
+                    desc = L["Adjust the speed of the pulsing effect"],
+                    order = 4,
+                    min = 0.1,
+                    max = 5,
+                    step = 0.1,
+                    get = function() return CursorGlow.db.profile.pulseSpeed end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.pulseSpeed = val
+                    end,
+                    disabled = function() return not CursorGlow.db.profile.pulseEnabled end,
                 },
             },
         },
@@ -922,12 +974,10 @@ tailSpacing = {
 }
 
 function CursorGlow:OnInitialize()
-    
     self.db = LibStub("AceDB-3.0"):New("CursorGlowDB", profileDefaults)
     self.dbChar = LibStub("AceDB-3.0"):New("CursorGlowCharDB", charDefaults)
-    
     self.dbGlobal = LibStub("AceDB-3.0"):New("CursorGlowGlobalDB", globalDefaults)
-    
+
     -- Register callbacks for dynamic profile changes
     self.db.RegisterCallback(self, "OnProfileChanged", "OnProfileChanged")
     self.db.RegisterCallback(self, "OnProfileCopied", "OnProfileChanged")
@@ -941,15 +991,15 @@ function CursorGlow:OnInitialize()
         local characterProfileName = UnitName("player") .. " - " .. GetRealmName()
         self.db:SetProfile(characterProfileName)
     end
-    
+
     self:ApplySettings()
-    
+
     if minimapButton and icon then
         icon:Register("CursorGlow", minimapButton, self.db.profile.minimap)
     else
         print("Error: Minimap button or LibDBIcon not properly initialized.")
     end
-    
+
     if self.db.profile.minimap and self.db.profile.minimap.hide then
         icon:Hide("CursorGlow")
     else
@@ -959,10 +1009,10 @@ end
     -- Register the main options
     AceConfig:RegisterOptionsTable("CursorGlow", options)
     AceConfigDialog:AddToBlizOptions("CursorGlow", "CursorGlow")
-    
+
     -- Create the profiles options table after self.db is initialized
     local profilesOptions = AceDBOptions:GetOptionsTable(self.db)
-    
+
     -- Register the profile options separately under "Profiles" tab
     AceConfig:RegisterOptionsTable("CursorGlow Profiles", profilesOptions)
     AceConfigDialog:AddToBlizOptions("CursorGlow Profiles", "Profiles", "CursorGlow")
@@ -1004,15 +1054,16 @@ function CursorGlow:DisableTailEffect()
     end
 end
 
-
 frame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 
+-- Modified OnUpdate function to include disappearing and reappearing pulse effect
 frame:SetScript("OnUpdate", function(self, elapsed)
-    local size = math.max(CursorGlow.db.profile.minSize, CursorGlow.db.profile.maxSize)
-    local opacity = CursorGlow.db.profile.opacity or 1
+    local profile = CursorGlow.db.profile
+    local size = math.max(profile.minSize, profile.maxSize)
+    local opacity = profile.opacity or 1
 
-    if CursorGlow.db.profile.operationMode == "enabledAlwaysOnCursor" then
+    if profile.operationMode == "enabledAlwaysOnCursor" then
         local scale = UIParent:GetEffectiveScale()
         local cursorX, cursorY = GetCursorPosition()
         texture:SetHeight(size)
@@ -1021,8 +1072,8 @@ frame:SetScript("OnUpdate", function(self, elapsed)
         texture:Show()
     else
         CursorGlow.tailLength = tonumber(CursorGlow.tailLength) or 60
-        local numTails = tonumber(CursorGlow.db.profile.numTails) or 1
-        local tailSpacing = tonumber(CursorGlow.db.profile.tailSpacing) or 10
+        local numTails = tonumber(profile.numTails) or 1
+        local tailSpacing = tonumber(profile.tailSpacing) or 10
 
         local cursorX, cursorY = GetCursorPosition()
         prevX = prevX or cursorX
@@ -1032,24 +1083,27 @@ frame:SetScript("OnUpdate", function(self, elapsed)
         local distance = math.sqrt(dX * dX + dY * dY)
 
         if elapsed == 0 then
-    elapsed = 0.0001
-end
+            elapsed = 0.0001
+        end
 
-local decayFactor = 1024 ^ -elapsed  -- Reduced from 2048 to 1024 for slower decay
-speed = math.min(decayFactor * speed + (0.5 * (1 - decayFactor) * distance / elapsed), 512)  -- Slower speed buildup
+        local decayFactor = 2048 ^ -elapsed
+        speed = math.min(decayFactor * speed + (1 - decayFactor) * distance / elapsed, 1024)
 
-
-        size = math.max(math.min(speed / 6, CursorGlow.db.profile.maxSize), CursorGlow.db.profile.minSize)
         local scale = UIParent:GetEffectiveScale()
 
         if distance > 0 then
             stationaryTime = 0
+            pulseElapsedTime = 0  
+
+            size = math.max(math.min(speed / 6, profile.maxSize), profile.minSize)
             texture:SetHeight(size)
             texture:SetWidth(size)
             texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", (cursorX + 0.5 * dX) / scale, (cursorY + 0.5 * dY) / scale)
+            texture:SetAlpha(opacity)
             texture:Show()
 
-            if CursorGlow.db.profile.enableTail then
+            -- Tail effect when moving
+            if profile.enableTail then
                 for tailIndex = 1, numTails do
                     local offset = (tailIndex - (numTails + 1) / 2) * tailSpacing * scale
                     local cursorPos = { x = (cursorX + offset) / scale, y = cursorY / scale }
@@ -1067,7 +1121,7 @@ speed = math.min(decayFactor * speed + (0.5 * (1 - decayFactor) * distance / ela
                             tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)
                             local alpha = (CursorGlow.tailLength - i + 1) / CursorGlow.tailLength
                             tailTexture:SetAlpha(alpha * opacity)
-                            tailTexture:SetSize(size * alpha, size * alpha)
+                            tailTexture:SetSize(size, size)
                             tailTexture:Show()
                         elseif tailTexture then
                             tailTexture:Hide()
@@ -1085,11 +1139,35 @@ speed = math.min(decayFactor * speed + (0.5 * (1 - decayFactor) * distance / ela
                 tailPositions = {}
             end
         else
-            texture:Hide()
             stationaryTime = stationaryTime + elapsed
 
-            if CursorGlow.db.profile.enableTail then
-                local numTails = CursorGlow.db.profile.numTails or 1
+            if profile.pulseEnabled then
+                -- Start pulsing after being stationary for 0.5 seconds
+                if stationaryTime >= 0.5 then
+                    pulseElapsedTime = pulseElapsedTime + elapsed
+                    local pulseSpeed = profile.pulseSpeed or 1
+                    local pulseProgress = (math.sin(pulseElapsedTime * pulseSpeed * math.pi * 2) + 1) / 2
+
+                    -- Calculate pulse size
+                    local pulseSize = profile.pulseMinSize + (profile.pulseMaxSize - profile.pulseMinSize) * pulseProgress
+                    texture:SetHeight(pulseSize)
+                    texture:SetWidth(pulseSize)
+
+                    -- Calculate pulse opacity (make it disappear and reappear)
+                    local pulseAlpha = opacity * pulseProgress
+                    texture:SetAlpha(pulseAlpha)
+
+                    texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cursorX / scale, cursorY / scale)
+                    texture:Show()
+                else
+                    texture:Hide()
+                end
+            else
+                texture:Hide()
+            end
+
+            if profile.enableTail then
+                local numTails = profile.numTails or 1
 
                 if stationaryTime >= 1 then
                     tailPositions = {}
@@ -1129,7 +1207,4 @@ speed = math.min(decayFactor * speed + (0.5 * (1 - decayFactor) * distance / ela
         prevY = cursorY
     end
 end)
-
-
-
 
