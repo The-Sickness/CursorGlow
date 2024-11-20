@@ -2,7 +2,11 @@ local L = LibStub("AceLocale-3.0"):NewLocale("CursorGlow", "esES")
 
 if not L then return end
 
+-- General Settings
 L["General"] = "General"
+L["General Settings"] = "Configuración General"
+L["Enable Global Profile"] = "Habilitar Perfil Global"
+L["Use the same settings for all characters"] = "Usar la misma configuración para todos los personajes"
 L["Operation Mode"] = "Modo de Operación"
 L["Select when the addon should be active"] = "Selecciona cuándo debe estar activo el complemento"
 L["Enabled Always"] = "Siempre Activado"
@@ -10,6 +14,24 @@ L["Enabled in Combat Only"] = "Activado Solo en Combate"
 L["Always Show on Cursor"] = "Mostrar Siempre en el Cursor"
 L["Show Minimap Icon"] = "Mostrar Icono del Minimapa"
 L["Show or hide the minimap icon"] = "Mostrar u ocultar el icono del minimapa"
+
+-- Explosion Settings
+L["Explosion Settings"] = "Configuración de Explosión"
+L["Explosion"] = "Explosión"
+L["Enable Explosion Effect"] = "Habilitar Efecto de Explosión"
+L["Enable or disable the explosion effect on left-click"] = "Habilitar o deshabilitar el efecto de explosión al hacer clic izquierdo"
+L["Explosion Color"] = "Color de la Explosión"
+L["Pick a color for the explosion effect"] = "Elige un color para el efecto de explosión"
+L["Explosion Size"] = "Tamaño de la Explosión"
+L["Adjust the size of the explosion effect"] = "Ajusta el tamaño del efecto de explosión"
+L["Explosion Texture Size"] = "Tamaño de la Textura de la Explosión"
+L["Adjust the texture size for the explosion effect"] = "Ajusta el tamaño de la textura para el efecto de explosión"
+L["Explosion Texture"] = "Textura de la Explosión"
+L["Select the texture for the explosion effect"] = "Selecciona la textura para el efecto de explosión"
+
+-- Appearance Settings
+L["Appearance Settings"] = "Configuración de Apariencia"
+L["Appearance"] = "Apariencia"
 L["Texture"] = "Textura"
 L["Select the texture for the cursor glow"] = "Selecciona la textura para el brillo del cursor"
 L["Color"] = "Color"
@@ -20,33 +42,32 @@ L["Minimum Size"] = "Tamaño Mínimo"
 L["Set the minimum size of the texture"] = "Establece el tamaño mínimo de la textura"
 L["Maximum Size"] = "Tamaño Máximo"
 L["Set the maximum size of the texture"] = "Establece el tamaño máximo de la textura"
-L["Appearance"] = "Apariencia"
-L["Explosion Color"] = "Color de la Explosión"
-L["Pick a color for the explosion effect"] = "Elige un color para el efecto de explosión"
-L["General Settings"] = "Configuración General"
-L["Enable Explosion Effect"] = "Habilitar Efecto de Explosión"
-L["Texture Color"] = "Color de la Textura"
-L["Select the color for the texture"] = "Selecciona el color para la textura"
-L["Enable or disable the explosion effect on left-click"] = "Habilitar o deshabilitar el efecto de explosión al hacer clic izquierdo"
-L["Explosion Settings"] = "Configuración de Explosión"
-L["Appearance Settings"] = "Configuración de Apariencia"
-L["Adjust the size of the explosion effect"] = "Ajusta el tamaño del efecto de explosión"
-L["Explosion Size"] = "Tamaño de la Explosión"
-L["Explosion"] = "Explosión"
-L["Explosion Texture Size"] = "Tamaño de la Textura de la Explosión"
-L["Adjust the texture size for the explosion effect"] = "Ajusta el tamaño de la textura para el efecto de explosión"
-L["Select the texture for the explosion effect"] = "Selecciona la textura para el efecto de explosión"
-L["Explosion Texture"] = "Textura de la Explosión"
+
+-- Tail Effect Settings
 L["Tail Effect Settings"] = "Configuración del Efecto Cola"
 L["Tail Effect"] = "Efecto Cola"
 L["Enable Tail Effect"] = "Habilitar Efecto Cola"
 L["Toggle the tail effect behind the cursor"] = "Activar o desactivar el efecto de cola detrás del cursor"
 L["Tail Length"] = "Longitud de la Cola"
 L["Adjust the length of the cursor tail"] = "Ajusta la longitud de la cola del cursor"
-L["Enable Global Profile"] = "Habilitar Perfil Global"
-L["Use the same settings for all characters"] = "Usar la misma configuración para todos los personajes"
+L["Number of Tails"] = "Número de Colas"
+L["Select the number of tails"] = "Selecciona el número de colas"
+L["Tail Spacing"] = "Espaciado entre Colas"
+L["Adjust the spacing between multiple tails"] = "Ajusta el espaciado entre múltiples colas"
 
--- Add all the color names
+-- Pulse Effect Settings
+L["Pulse Effect Settings"] = "Configuración del Efecto de Pulso"
+L["Pulse Effect"] = "Efecto de Pulso"
+L["Enable Pulse Effect"] = "Habilitar Efecto de Pulso"
+L["Toggle the pulsing effect when cursor is stationary"] = "Activar o desactivar el efecto de pulso cuando el cursor está inmóvil"
+L["Pulse Minimum Size"] = "Tamaño Mínimo del Pulso"
+L["Set the minimum size of the pulse effect"] = "Establece el tamaño mínimo del efecto de pulso"
+L["Pulse Maximum Size"] = "Tamaño Máximo del Pulso"
+L["Set the maximum size of the pulse effect"] = "Establece el tamaño máximo del efecto de pulso"
+L["Pulse Speed"] = "Velocidad del Pulso"
+L["Adjust the speed of the pulsing effect"] = "Ajusta la velocidad del efecto de pulso"
+
+-- Colors
 L["Red"] = "Rojo"
 L["Green"] = "Verde"
 L["Blue"] = "Azul"
@@ -64,7 +85,7 @@ L["Lime"] = "Lima"
 L["Olive"] = "Oliva"
 L["Navy"] = "Azul Marino"
 
--- WoW Class Colors
+-- Class Colors
 L["Warrior"] = "Guerrero"
 L["Paladin"] = "Paladín"
 L["Hunter"] = "Cazador"
