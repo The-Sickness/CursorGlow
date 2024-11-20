@@ -99,3 +99,7 @@ L["Monk"] = "武僧"
 L["Druid"] = "德鲁伊"
 L["Demon Hunter"] = "恶魔猎人"
 L["Evoker"] = "唤魔师"
+
+-- Intensity
+L["Intensity"] = "强度"
+L["Adjust the intensity (brightness) of the cursor glow"] = "调整鼠标指针光辉的强度（亮度）"

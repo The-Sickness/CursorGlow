@@ -99,3 +99,7 @@ L["Monk"] = "Moine"
 L["Druid"] = "Druide"
 L["Demon Hunter"] = "Chasseur de Démons"
 L["Evoker"] = "Invocateur"
+
+-- Intensity
+L["Intensity"] = "Intensité"
+L["Adjust the intensity (brightness) of the cursor glow"] = "Ajustez l'intensité (luminosité) de l'éclat du curseur"
