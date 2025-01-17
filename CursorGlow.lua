@@ -1,6 +1,6 @@
 -- CursorGlow
 -- Made by Sharpedge_Gaming
--- v4.3 - 11.1.0
+-- v4.2 - 11.0.7
 
 local LibStub = LibStub or _G.LibStub
 local AceDB = LibStub:GetLibrary("AceDB-3.0")
@@ -356,7 +356,97 @@ local function UpdateExplosionTexture(textureKey)
     end
 end
 
+-- Function to trigger the explosion effect
+local function TriggerExplosion(cursorX, cursorY)
+    local scale = UIParent:GetEffectiveScale()
+    local color = CursorGlow.db.profile.explosionColor  -- Get the explosion color from settings
+    local explosionSize = CursorGlow.db.profile.explosionSize or 15  -- Set default size if nil
+    local textureSize = CursorGlow.db.profile.explosionTextureSize or 10  -- Set default texture size if nil
+    local explosionTexture = CursorGlow.db.profile.explosionTexture or "ring1"  -- Fallback to "ring1"
 
+    -- Ensure particles are created with the correct texture
+    local function UpdateExplosionTexture(textureKey)
+        local texturePath = textureOptions[textureKey]
+        particles = {}  -- Clear existing particles
+        for i = 1, 100 do  -- Initialize 100 particles with the new texture
+            local particle = CreateFrame("Frame", nil, UIParent)
+            particle:SetFrameStrata("TOOLTIP")
+            particle:SetSize(textureSize, textureSize)
+
+            local texture = particle:CreateTexture(nil, "ARTWORK")
+            texture:SetTexture(texturePath)
+            texture:SetBlendMode("ADD")
+            texture:SetAllPoints(particle)
+
+            particle.texture = texture
+            particle:SetAlpha(1)
+            texture:SetAlpha(1)
+            particle:Hide()
+
+            particles[i] = particle
+        end
+    end
+
+    UpdateExplosionTexture(explosionTexture)  -- Update texture based on user selection
+
+    for _, particle in ipairs(particles) do
+        -- Randomize particle direction and distance, applying the explosion size
+        local angle = math.random() * 2 * math.pi
+        local distance = math.random(1, explosionSize)  -- Adjust particle spread based on explosion size
+        local xOffset = math.cos(angle) * distance
+        local yOffset = math.sin(angle) * distance
+
+        particle:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cursorX / scale, cursorY / scale)
+        particle:SetAlpha(1)  -- Reset alpha when the particle is shown
+        particle.texture:SetAlpha(1)  -- Reset the texture alpha
+        particle.texture:SetVertexColor(unpack(color))  -- Apply the selected color
+
+        -- Set the particle texture size based on the user's input
+        particle:SetSize(textureSize, textureSize)  -- Dynamically adjust texture size
+        particle:Show()
+
+        -- Animate particle movement with a fade-out
+        particle:SetScript("OnUpdate", function(self, elapsed)
+            local speed = 30
+            local dx, dy = speed * xOffset * elapsed, speed * yOffset * elapsed
+            local currentX, currentY = self:GetCenter()
+            particle:SetPoint("CENTER", UIParent, "BOTTOMLEFT", currentX + dx, currentY + dy)
+
+            -- Get the current alpha, ensure it isn't nil, and fade it out
+            local currentAlpha = particle:GetAlpha() or 1
+            local newAlpha = currentAlpha - (elapsed * 0.8)
+            if newAlpha <= 0 then
+                particle:Hide()  -- Hide the particle when it's fully faded out
+            else
+                particle:SetAlpha(newAlpha)  -- Apply the new alpha value
+            end
+        end)
+    end
+end
+
+-- Click handler function that does not block interactions
+local function TriggerExplosionOnClick()
+    local cursorX, cursorY = GetCursorPosition()
+    TriggerExplosion(cursorX, cursorY)
+end
+
+-- Create a dedicated frame for detecting global mouse events
+local eventHandlerFrame = CreateFrame("Frame", nil, UIParent)
+eventHandlerFrame:RegisterEvent("GLOBAL_MOUSE_DOWN")
+
+-- Event handler function
+eventHandlerFrame:SetScript("OnEvent", function(self, event, buttonName)
+    if event == "GLOBAL_MOUSE_DOWN" and buttonName == "LeftButton" and CursorGlow.db.profile.enableExplosion then
+        TriggerExplosionOnClick()
+    end
+end)
+
+local function UpdateExplosionTextureSize(size)
+    -- Iterate over all particles and update their size based on the value
+    for _, particle in ipairs(particles) do
+        particle:SetSize(size, size)  -- Adjust the width and height
+    end
+end
 
 -- Create a DataBroker object for the minimap button
 local minimapButton = LDB:NewDataObject("CursorGlow", {
@@ -533,114 +623,114 @@ local options = {
         },
 
         -- Explosion Settings Header
-       -- explosionHeader = {
-         --   type = 'header',
-         --   name = L["Explosion Settings"],
-         --   order = 10,
-      --  },
-      --  explosion = {
-        --    type = 'group',
-        --    name = L["Explosion"],
-        --    order = 11,
-        --    inline = true,
-        --    args = {
-        --        enableExplosion = {
-          --          type = 'toggle',
-         --           name = L["Enable Explosion Effect"],
-           --         desc = L["Enable or disable the explosion effect on left-click"],
-           --         order = 1,
-           --         get = function() return CursorGlow.db.profile.enableExplosion end,
-           --         set = function(_, val)
-           --             CursorGlow.db.profile.enableExplosion = val
-           --         end,
-          --      },
-          --      explosionColor = {
-          --          type = 'color',
-         --           name = L["Explosion Color"],
-          --          desc = L["Pick a color for the explosion effect"],
-          --          order = 2,
-         --           get = function()
-          --              local color = CursorGlow.db.profile.explosionColor
-          --              return unpack(color or {1, 1, 1})
-          --          end,
-          --          set = function(_, r, g, b)
-          --              CursorGlow.db.profile.explosionColor = {r, g, b}
-          --          end,
-          --          disabled = function() return not CursorGlow.db.profile.enableExplosion end,
-          --      },
-          --      spacerExplosion1 = {
-          --          type = 'description',
-          --          name = " ",  -- Blank spacer for separation
-          --          order = 3,
-          --      },
-          --      explosionSize = {
-          --          type = 'range',
-           --         name = L["Explosion Size"],
-           --         desc = L["Adjust the size of the explosion effect"],
-           --         order = 4,
-           --         min = 5,
-           --         max = 50,
-           --         step = 1,
-           --         get = function() return CursorGlow.db.profile.explosionSize end,
-           --         set = function(_, val)
-           --             CursorGlow.db.profile.explosionSize = val
-           --         end,
-           --         disabled = function() return not CursorGlow.db.profile.enableExplosion end,
-           --     },
-           --     explosionTextureSize = {
-           --         type = 'range',
-           --         name = L["Explosion Texture Size"],
-            --        desc = L["Adjust the texture size for the explosion effect"],
-           --         order = 5,
-           --         min = 10,
-           --         max = 40,
-            --        step = 1,
-           --         get = function() return CursorGlow.db.profile.explosionTextureSize end,
-           --         set = function(_, val)
-           --             CursorGlow.db.profile.explosionTextureSize = val
-           --             UpdateExplosionTextureSize(val)
-           --         end,
-           --         disabled = function() return not CursorGlow.db.profile.enableExplosion end,
-            --    },
-            --    explosionTexture = {
-           --         type = 'select',
-           --         name = L["Explosion Texture"],
-           --         desc = L["Select the texture for the explosion effect"],
-           --         order = 6,
-           --         values = {
-           --             ring1 = "Ring 1",
-           --             ring2 = "Ring 2",
-           --             ring3 = "Ring 3",
-           --             ring4 = "Ring 4",
-           --             ring5 = "Ring 5",
-           --             ring6 = "Ring 6",
-           --             ring7 = "Ring 7",
-           --             ring8 = "Ring 8",
-           --             ring9 = "Ring 9",
-           --             ring10 = "Star 1",
-           --             ring11 = "Star 2",
-           --             ring12 = "Star 3",
-          --              ring13 = "Star 4",
-          --              ring14 = "Star 5",
-           --             ring15 = "Starburst",
-           --             ring16 = "Butterfly",
-           --             ring17 = "Butterfly 2",
-          --              ring18 = "Butterfly 3",
-          --              ring19 = "Swirl",
-          --              ring20 = "Swirl 2",
-         --               ring21 = "Horde",
-         --               ring22 = "Alliance",
-         --               ring23 = "Burst",
-         --           },
-         --           get = function() return CursorGlow.db.profile.explosionTexture end,
-          --          set = function(_, val)
-          --              CursorGlow.db.profile.explosionTexture = val
-          --              UpdateExplosionTexture(val)
-          --          end,
-               --     disabled = function() return not CursorGlow.db.profile.enableExplosion end,
-           --     },
-        --    },
-     --   },
+        explosionHeader = {
+            type = 'header',
+            name = L["Explosion Settings"],
+            order = 10,
+        },
+        explosion = {
+            type = 'group',
+            name = L["Explosion"],
+            order = 11,
+            inline = true,
+            args = {
+                enableExplosion = {
+                    type = 'toggle',
+                    name = L["Enable Explosion Effect"],
+                    desc = L["Enable or disable the explosion effect on left-click"],
+                    order = 1,
+                    get = function() return CursorGlow.db.profile.enableExplosion end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.enableExplosion = val
+                    end,
+                },
+                explosionColor = {
+                    type = 'color',
+                    name = L["Explosion Color"],
+                    desc = L["Pick a color for the explosion effect"],
+                    order = 2,
+                    get = function()
+                        local color = CursorGlow.db.profile.explosionColor
+                        return unpack(color or {1, 1, 1})
+                    end,
+                    set = function(_, r, g, b)
+                        CursorGlow.db.profile.explosionColor = {r, g, b}
+                    end,
+                    disabled = function() return not CursorGlow.db.profile.enableExplosion end,
+                },
+                spacerExplosion1 = {
+                    type = 'description',
+                    name = " ",  -- Blank spacer for separation
+                    order = 3,
+                },
+                explosionSize = {
+                    type = 'range',
+                    name = L["Explosion Size"],
+                    desc = L["Adjust the size of the explosion effect"],
+                    order = 4,
+                    min = 5,
+                    max = 50,
+                    step = 1,
+                    get = function() return CursorGlow.db.profile.explosionSize end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.explosionSize = val
+                    end,
+                    disabled = function() return not CursorGlow.db.profile.enableExplosion end,
+                },
+                explosionTextureSize = {
+                    type = 'range',
+                    name = L["Explosion Texture Size"],
+                    desc = L["Adjust the texture size for the explosion effect"],
+                    order = 5,
+                    min = 10,
+                    max = 40,
+                    step = 1,
+                    get = function() return CursorGlow.db.profile.explosionTextureSize end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.explosionTextureSize = val
+                        UpdateExplosionTextureSize(val)
+                    end,
+                    disabled = function() return not CursorGlow.db.profile.enableExplosion end,
+                },
+                explosionTexture = {
+                    type = 'select',
+                    name = L["Explosion Texture"],
+                    desc = L["Select the texture for the explosion effect"],
+                    order = 6,
+                    values = {
+                        ring1 = "Ring 1",
+                        ring2 = "Ring 2",
+                        ring3 = "Ring 3",
+                        ring4 = "Ring 4",
+                        ring5 = "Ring 5",
+                        ring6 = "Ring 6",
+                        ring7 = "Ring 7",
+                        ring8 = "Ring 8",
+                        ring9 = "Ring 9",
+                        ring10 = "Star 1",
+                        ring11 = "Star 2",
+                        ring12 = "Star 3",
+                        ring13 = "Star 4",
+                        ring14 = "Star 5",
+                        ring15 = "Starburst",
+                        ring16 = "Butterfly",
+                        ring17 = "Butterfly 2",
+                        ring18 = "Butterfly 3",
+                        ring19 = "Swirl",
+                        ring20 = "Swirl 2",
+                        ring21 = "Horde",
+                        ring22 = "Alliance",
+                        ring23 = "Burst",
+                    },
+                    get = function() return CursorGlow.db.profile.explosionTexture end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.explosionTexture = val
+                        UpdateExplosionTexture(val)
+                    end,
+                    disabled = function() return not CursorGlow.db.profile.enableExplosion end,
+                },
+            },
+        },
 
         -- Appearance Settings Header
         appearanceHeader = {
