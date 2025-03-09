@@ -1,6 +1,6 @@
 -- CursorGlow
 -- Made by Sharpedge_Gaming
--- v4.2 - 11.0.7
+-- v4.5 - 11.1.0
 
 local LibStub = LibStub or _G.LibStub
 local AceDB = LibStub:GetLibrary("AceDB-3.0")
@@ -44,6 +44,13 @@ local textureOptions = {
     ["ring21"] = "Interface\\Addons\\CursorGlow\\Textures\\Test17.png",
     ["ring22"] = "Interface\\Addons\\CursorGlow\\Textures\\Test18.png",
 	["ring23"] = "Interface\\Addons\\CursorGlow\\Textures\\Burst.png",
+	["ring24"] = "Interface\\Addons\\CursorGlow\\Textures\\Fireball1.png",
+	["ring25"] = "Interface\\Addons\\CursorGlow\\Textures\\Spiderweb.png",
+	["ring26"] = "Interface\\Addons\\CursorGlow\\Textures\\ShatteredGlass.png",
+	["ring27"] = "Interface\\Addons\\CursorGlow\\Textures\\Bubbles.png",
+	["ring28"] = "Interface\\Addons\\CursorGlow\\Textures\\Eyeball.png",
+	["ring29"] = "Interface\\Addons\\CursorGlow\\Textures\\Skull.png",
+	["ring30"] = "Interface\\Addons\\CursorGlow\\Textures\\Snowflake.png",
 }
 
 local orderedKeys = {
@@ -70,6 +77,13 @@ local orderedKeys = {
     "ring21",
     "ring22", 
 	"ring23",
+	"ring24",
+	"ring25",
+	"ring26",
+	"ring27",
+	"ring28",
+	"ring29",
+	"ring30",
 }
 
 local displayNames = {
@@ -96,6 +110,13 @@ local displayNames = {
     ring21 = 'Horde',
     ring22 = 'Alliance',
 	ring23 = 'Burst',
+	ring24 = 'Fireball',
+	ring25 = 'Spiderweb',
+	ring26 = 'ShatteredGlass',
+	ring27 = 'Bubbles',
+	ring28 = 'Eyeball',
+	ring29 = 'Skull',
+	ring30 = 'Snowflake',
 }
 
 local values = {}
@@ -721,6 +742,13 @@ local options = {
                         ring21 = "Horde",
                         ring22 = "Alliance",
                         ring23 = "Burst",
+						ring24 = "Fireball",
+						ring25 = "SpiderWeb",
+						ring26 = "ShatteredGlass",
+						ring27 = "Bubbles",
+						ring28 = "Eyeball",
+						ring29 = "Skull",
+						ring30 = "Snowflake",
                     },
                     get = function() return CursorGlow.db.profile.explosionTexture end,
                     set = function(_, val)
