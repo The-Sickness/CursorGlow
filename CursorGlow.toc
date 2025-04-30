@@ -1,8 +1,8 @@
-## Interface: 110100
+## Interface: 110105
 ## Title: CursorGlow
 ## Notes: Makes it easy to keep track of where your cursor is located.
 ## Author: SharpeEdge-Gaming
-## Version: 4.5
+## Version: 4.9
 ## DefaultState: enabled
 ## IconTexture: 237545
 ## SavedVariables: CursorGlowDB, CursorGlowGlobalDB
