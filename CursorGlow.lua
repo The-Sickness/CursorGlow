@@ -1,6 +1,6 @@
 -- CursorGlow
 -- Made by Sharpedge_Gaming
--- v4.9  11.1.5
+-- v5.3  11.1.7
 
 local LibStub = LibStub or _G.LibStub
 local AceDB = LibStub:GetLibrary("AceDB-3.0")
@@ -51,6 +51,7 @@ local textureOptions = {
 	["ring28"] = "Interface\\Addons\\CursorGlow\\Textures\\Eyeball.png",
 	["ring29"] = "Interface\\Addons\\CursorGlow\\Textures\\Skull.png",
 	["ring30"] = "Interface\\Addons\\CursorGlow\\Textures\\Snowflake.png",
+	["ring31"] = "Interface\\Addons\\CursorGlow\\Textures\\Paw.png",
 }
 
 local orderedKeys = {
@@ -84,6 +85,7 @@ local orderedKeys = {
 	"ring28",
 	"ring29",
 	"ring30",
+	"ring31",
 }
 
 local displayNames = {
@@ -117,6 +119,7 @@ local displayNames = {
 	ring28 = 'Eyeball',
 	ring29 = 'Skull',
 	ring30 = 'Snowflake',
+	ring31 = 'Paw',
 }
 
 local values = {}
@@ -726,6 +729,7 @@ local options = {
 						ring28 = "Eyeball",
 						ring29 = "Skull",
 						ring30 = "Snowflake",
+						ring31 = "Paw",
                     },
                     get = function() return CursorGlow.db.profile.explosionTexture end,
                     set = function(_, val)

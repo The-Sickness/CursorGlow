@@ -1,8 +1,8 @@
-## Interface: 110105
+## Interface: 110107
 ## Title: CursorGlow
 ## Notes: Makes it easy to keep track of where your cursor is located.
 ## Author: SharpeEdge-Gaming
-## Version: 4.9
+## Version: 5.3
 ## DefaultState: enabled
 ## IconTexture: 237545
 ## SavedVariables: CursorGlowDB, CursorGlowGlobalDB
@@ -40,6 +40,8 @@ Locale/zhCN.lua
 Locale/deDE.lua
 Locale/itIT.lua
 Locale/koKR.lua
+Locale/ukUA.lua
+Locale/ruRU.lua
 
 CursorGlow.lua
 
