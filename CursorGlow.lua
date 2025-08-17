@@ -1,6 +1,6 @@
 -- CursorGlow
 -- Made by Sharpedge_Gaming
--- v5.5  11.2
+-- v6.1  2025.08 
 
 local LibStub = LibStub or _G.LibStub
 local AceDB = LibStub:GetLibrary("AceDB-3.0")
@@ -15,11 +15,12 @@ local icon = LibStub("LibDBIcon-1.0")
 local L = LibStub("AceLocale-3.0"):GetLocale("CursorGlow", true)
 
 local CursorGlow = AceAddon:NewAddon("CursorGlow", "AceEvent-3.0", "AceConsole-3.0")
-local speed = 0
-local stationaryTime = 0
-local pulseElapsedTime = 0  
 
--- Define texture options
+-- Constants
+local NUM_PARTICLES = 100
+local EXPLOSION_SPEED = 30
+
+-- Texture and Color Options
 local textureOptions = {
     ["ring1"] = "Interface\\Addons\\CursorGlow\\Textures\\Test2.png",
     ["ring2"] = "Interface\\Addons\\CursorGlow\\Textures\\Test3.png",
@@ -43,185 +44,79 @@ local textureOptions = {
     ["ring20"] = "Interface\\Addons\\CursorGlow\\Textures\\Test16.png",
     ["ring21"] = "Interface\\Addons\\CursorGlow\\Textures\\Test17.png",
     ["ring22"] = "Interface\\Addons\\CursorGlow\\Textures\\Test18.png",
-	["ring23"] = "Interface\\Addons\\CursorGlow\\Textures\\Burst.png",
-	["ring24"] = "Interface\\Addons\\CursorGlow\\Textures\\Fireball1.png",
-	["ring25"] = "Interface\\Addons\\CursorGlow\\Textures\\Spiderweb.png",
-	["ring26"] = "Interface\\Addons\\CursorGlow\\Textures\\ShatteredGlass.png",
-	["ring27"] = "Interface\\Addons\\CursorGlow\\Textures\\Bubbles.png",
-	["ring28"] = "Interface\\Addons\\CursorGlow\\Textures\\Eyeball.png",
-	["ring29"] = "Interface\\Addons\\CursorGlow\\Textures\\Skull.png",
-	["ring30"] = "Interface\\Addons\\CursorGlow\\Textures\\Snowflake.png",
-	["ring31"] = "Interface\\Addons\\CursorGlow\\Textures\\Paw.png",
+    ["ring23"] = "Interface\\Addons\\CursorGlow\\Textures\\Burst.png",
+    ["ring24"] = "Interface\\Addons\\CursorGlow\\Textures\\Fireball1.png",
+    ["ring25"] = "Interface\\Addons\\CursorGlow\\Textures\\Spiderweb.png",
+    ["ring26"] = "Interface\\Addons\\CursorGlow\\Textures\\ShatteredGlass.png",
+    ["ring27"] = "Interface\\Addons\\CursorGlow\\Textures\\Bubbles.png",
+    ["ring28"] = "Interface\\Addons\\CursorGlow\\Textures\\Eyeball.png",
+    ["ring29"] = "Interface\\Addons\\CursorGlow\\Textures\\Skull.png",
+    ["ring30"] = "Interface\\Addons\\CursorGlow\\Textures\\Snowflake.png",
+    ["ring31"] = "Interface\\Addons\\CursorGlow\\Textures\\Paw.png",
+    ["explosionParticle"] = "Interface\\Addons\\CursorGlow\\Textures\\Test17.png",
 }
 
 local orderedKeys = {
-    "ring1", 
-    "ring2", 
-    "ring3", 
-    "ring4", 
-    "ring5",
-    "ring6", 
-    "ring7", 
-    "ring8", 
-    "ring9", 
-    "ring10",
-    "ring11", 
-    "ring12", 
-    "ring13", 
-    "ring14",
-    "ring15",
-    "ring16",
-    "ring17",
-    "ring18",
-    "ring19",
-    "ring20",
-    "ring21",
-    "ring22", 
-	"ring23",
-	"ring24",
-	"ring25",
-	"ring26",
-	"ring27",
-	"ring28",
-	"ring29",
-	"ring30",
-	"ring31",
+    "ring1", "ring2", "ring3", "ring4", "ring5", "ring6", "ring7", "ring8", "ring9", "ring10",
+    "ring11", "ring12", "ring13", "ring14", "ring15", "ring16", "ring17", "ring18", "ring19", "ring20",
+    "ring21", "ring22", "ring23", "ring24", "ring25", "ring26", "ring27", "ring28", "ring29", "ring30", "ring31",
 }
 
 local displayNames = {
-    ring1 = 'Ring 1',
-    ring2 = 'Ring 2',
-    ring3 = 'Ring 3',
-    ring4 = 'Ring 4',
-    ring5 = 'Ring 5',
-    ring6 = 'Ring 6',
-    ring7 = 'Ring 7',
-    ring8 = 'Ring 8',
-    ring9 = 'Ring 9',
-    ring10 = 'Star 1',
-    ring11 = 'Star 2',
-    ring12 = 'Star 3',
-    ring13 = 'Star 4',
-    ring14 = 'Star 5',
-    ring15 = 'Starburst',
-    ring16 = 'Butterfly',
-    ring17 = 'Butterfly2',
-    ring18 = 'Butterfly3',
-    ring19 = 'Swirl',
-    ring20 = 'Swirl2',
-    ring21 = 'Horde',
-    ring22 = 'Alliance',
-	ring23 = 'Burst',
-	ring24 = 'Fireball',
-	ring25 = 'Spiderweb',
-	ring26 = 'ShatteredGlass',
-	ring27 = 'Bubbles',
-	ring28 = 'Eyeball',
-	ring29 = 'Skull',
-	ring30 = 'Snowflake',
-	ring31 = 'Paw',
+    ring1 = 'Ring 1', ring2 = 'Ring 2', ring3 = 'Ring 3', ring4 = 'Ring 4', ring5 = 'Ring 5',
+    ring6 = 'Ring 6', ring7 = 'Ring 7', ring8 = 'Ring 8', ring9 = 'Ring 9', ring10 = 'Star 1',
+    ring11 = 'Star 2', ring12 = 'Star 3', ring13 = 'Star 4', ring14 = 'Star 5', ring15 = 'Starburst',
+    ring16 = 'Butterfly', ring17 = 'Butterfly2', ring18 = 'Butterfly3', ring19 = 'Swirl', ring20 = 'Swirl2',
+    ring21 = 'Horde', ring22 = 'Alliance', ring23 = 'Burst', ring24 = 'Fireball', ring25 = 'Spiderweb',
+    ring26 = 'ShatteredGlass', ring27 = 'Bubbles', ring28 = 'Eyeball', ring29 = 'Skull', ring30 = 'Snowflake', ring31 = 'Paw',
+}
+local values = {}
+for _, key in ipairs(orderedKeys) do values[key] = displayNames[key] end
+
+local colorOptions = {
+    red = {1, 0, 0}, green = {0, 1, 0}, blue = {0, 0, 1}, purple = {1, 0, 1}, white = {1, 1, 1},
+    pink = {1, 0.08, 0.58}, orange = {1, 0.65, 0}, cyan = {0, 1, 1}, yellow = {1, 1, 0}, gray = {0.5, 0.5, 0.5},
+    gold = {1, 0.84, 0}, teal = {0, 0.5, 0.5}, magenta = {1, 0, 1}, lime = {0.75, 1, 0}, olive = {0.5, 0.5, 0}, navy = {0, 0, 0.5},
+    warrior = {0.78, 0.61, 0.43}, paladin = {0.96, 0.55, 0.73}, hunter = {0.67, 0.83, 0.45}, rogue = {1.00, 0.96, 0.41},
+    priest = {1.00, 1.00, 1.00}, deathknight = {0.77, 0.12, 0.23}, shaman = {0.00, 0.44, 0.87}, mage = {0.41, 0.80, 0.94},
+    warlock = {0.58, 0.51, 0.79}, monk = {0.00, 1.00, 0.59}, druid = {1.00, 0.49, 0.04}, demonhunter = {0.64, 0.19, 0.79}, evoker = {0.20, 0.58, 0.50}
 }
 
-local values = {}
-for _, key in ipairs(orderedKeys) do
-    values[key] = displayNames[key]
-end
-
--- Create the main frame and texture
+-- Main frame and texture
 local frame = CreateFrame("Frame", nil, UIParent)
 frame:SetFrameStrata("TOOLTIP")
 local texture = frame:CreateTexture()
-texture:SetTexture(textureOptions["star4"])  
+texture:SetTexture(textureOptions["star4"])
 texture:SetBlendMode("ADD")
-texture:SetSize(32, 32) 
-
--- Define color options
-local colorOptions = {
-    red = {1, 0, 0},
-    green = {0, 1, 0},
-    blue = {0, 0, 1},
-    purple = {1, 0, 1},
-    white = {1, 1, 1},
-    pink = {1, 0.08, 0.58},
-    orange = {1, 0.65, 0},
-    cyan = {0, 1, 1},
-    yellow = {1, 1, 0},
-    gray = {0.5, 0.5, 0.5},
-    gold = {1, 0.84, 0},
-    teal = {0, 0.5, 0.5},
-    magenta = {1, 0, 1},
-    lime = {0.75, 1, 0},
-    olive = {0.5, 0.5, 0},
-    navy = {0, 0, 0.5},
-    -- WoW Class Colors
-    warrior = {0.78, 0.61, 0.43},
-    paladin = {0.96, 0.55, 0.73},
-    hunter = {0.67, 0.83, 0.45},
-    rogue = {1.00, 0.96, 0.41},
-    priest = {1.00, 1.00, 1.00},
-    deathknight = {0.77, 0.12, 0.23},
-    shaman = {0.00, 0.44, 0.87},
-    mage = {0.41, 0.80, 0.94},
-    warlock = {0.58, 0.51, 0.79},
-    monk = {0.00, 1.00, 0.59},
-    druid = {1.00, 0.49, 0.04},
-    demonhunter = {0.64, 0.19, 0.79},
-    evoker = {0.20, 0.58, 0.50}
-}
+texture:SetSize(32, 32)
 
 -- Tail effect variables
-local tailSegments = {}
-local tailLength = 60  
-local tailPositions = {}  
-local tailTextures = {}   
-local tailPositions = {} 
+local tailTextures = {}
+local tailPositions = {}
+CursorGlow.tailLength = 60
 
--- Initialize tail textures
-for i = 1, tailLength do
-    local tailTexture = frame:CreateTexture(nil, "BACKGROUND")
-    tailTexture:SetTexture(textureOptions["star4"])  
-    tailTexture:SetBlendMode("ADD")
-    tailTexture:SetSize(32, 32)
-    tailTextures[i] = tailTexture
-end
-
-local function InitializeTailTextures()
-    tailTextures = tailTextures or {}
-    tailPositions = tailPositions or {}
-
-    for _, tailGroup in pairs(tailTextures) do
-        if tailGroup then
-            for _, tailTexture in ipairs(tailGroup) do
-                if tailTexture and tailTexture.Hide then
-                    tailTexture:Hide()
-                    tailTexture:SetTexture(nil)
-                end
-            end
+-- Explosion particle pool
+local particles = {}
+local function CreateExplosionParticles(textureKey, size)
+    for i = 1, NUM_PARTICLES do
+        if not particles[i] then
+            local particle = CreateFrame("Frame", nil, UIParent)
+            particle:SetFrameStrata("TOOLTIP")
+            particle:SetSize(size, size)
+            local tex = particle:CreateTexture(nil, "ARTWORK")
+            tex:SetBlendMode("ADD")
+            tex:SetAllPoints(particle)
+            particle.texture = tex
+            particle:Hide()
+            particles[i] = particle
         end
-    end
-    tailTextures = {}
-    tailPositions = {}
-
-    local numTails = CursorGlow.db.profile.numTails or 1
-    local colorValue = colorOptions[CursorGlow.db.profile.color] or {1, 1, 1}
-    local texturePath = textureOptions[CursorGlow.db.profile.texture] or textureOptions["star4"]
-
-    for tailIndex = 1, numTails do
-        tailTextures[tailIndex] = {}
-        tailPositions[tailIndex] = {}
-        
-        for i = 1, CursorGlow.tailLength do
-            local tailTexture = frame:CreateTexture(nil, "BACKGROUND")
-            tailTexture:SetTexture(texturePath)
-            tailTexture:SetBlendMode("ADD")
-            tailTexture:SetSize(32, 32)
-            tailTexture:SetVertexColor(colorValue[1], colorValue[2], colorValue[3], CursorGlow.db.profile.opacity)
-            tailTextures[tailIndex][i] = tailTexture  -- Store the created texture
-        end
+        local texturePath = textureOptions[textureKey]
+        particles[i].texture:SetTexture(texturePath)
+        particles[i]:SetSize(size, size)
+        particles[i].texture:SetVertexColor(1, 1, 1, 1)
     end
 end
 
--- Function to get the default class color
 local function GetDefaultClassColor()
     local _, class = UnitClass("player")
     if class then
@@ -230,19 +125,15 @@ local function GetDefaultClassColor()
             return {classColor.r, classColor.g, classColor.b}
         end
     end
-    return {1, 1, 1}  
+    return {1, 1, 1}
 end
 
 local function UpdateTextureColor()
     local colorValue = colorOptions[CursorGlow.db.profile.color] or {1, 1, 1}
     texture:SetVertexColor(colorValue[1], colorValue[2], colorValue[3], CursorGlow.db.profile.opacity)
     for _, tailGroup in pairs(tailTextures) do
-        if tailGroup then
-            for _, tailTexture in ipairs(tailGroup) do
-                if tailTexture then
-                    tailTexture:SetVertexColor(colorValue[1], colorValue[2], colorValue[3], CursorGlow.db.profile.opacity)
-                end
-            end
+        for _, tailTexture in ipairs(tailGroup or {}) do
+            tailTexture:SetVertexColor(colorValue[1], colorValue[2], colorValue[3], CursorGlow.db.profile.opacity)
         end
     end
 end
@@ -251,12 +142,8 @@ local function UpdateTexture(textureKey)
     local texturePath = textureOptions[textureKey] or textureOptions["star4"]
     texture:SetTexture(texturePath)
     for _, tailGroup in pairs(tailTextures) do
-        if tailGroup then
-            for _, tailTexture in ipairs(tailGroup) do
-                if tailTexture then
-                    tailTexture:SetTexture(texturePath)
-                end
-            end
+        for _, tailTexture in ipairs(tailGroup or {}) do
+            tailTexture:SetTexture(texturePath)
         end
     end
     UpdateTextureColor()
@@ -264,200 +151,101 @@ end
 
 local function ToggleAddon(enable)
     if not CursorGlow.db.profile.combatOnly or UnitAffectingCombat("player") then
-        if enable then
-            frame:Show()
-        else
-            frame:Hide()
-        end
+        if enable then frame:Show() else frame:Hide() end
     end
 end
 
 local function UpdateAddonVisibility()
-    if CursorGlow.db.profile.operationMode == "disabled" then
-        frame:Hide()
-    elseif CursorGlow.db.profile.operationMode == "enabledAlways" or CursorGlow.db.profile.operationMode == "enabledAlwaysOnCursor" then
-        frame:Show()
-    elseif CursorGlow.db.profile.operationMode == "enabledInCombat" then
-        if UnitAffectingCombat("player") then
-            frame:Show()
-        else
-            frame:Hide()
+    local mode = CursorGlow.db.profile.operationMode
+    if mode == "disabled" then frame:Hide()
+    elseif mode == "enabledAlways" or mode == "enabledAlwaysOnCursor" then frame:Show()
+    elseif mode == "enabledInCombat" then
+        if UnitAffectingCombat("player") then frame:Show() else frame:Hide() end
+    end
+end
+
+local function InitializeTailTextures()
+    for _, tailGroup in pairs(tailTextures) do
+        for _, tailTexture in ipairs(tailGroup or {}) do
+            tailTexture:Hide()
+            tailTexture:SetTexture(nil)
         end
     end
+    wipe(tailTextures)
+    wipe(tailPositions)
+
+    local numTails = CursorGlow.db.profile.numTails or 1
+    local colorValue = colorOptions[CursorGlow.db.profile.color] or {1, 1, 1}
+    local texturePath = textureOptions[CursorGlow.db.profile.texture] or textureOptions["star4"]
+    for tailIndex = 1, numTails do
+        tailTextures[tailIndex] = {}
+        tailPositions[tailIndex] = {}
+        for i = 1, CursorGlow.tailLength do
+            local tailTexture = frame:CreateTexture(nil, "BACKGROUND")
+            tailTexture:SetTexture(texturePath)
+            tailTexture:SetBlendMode("ADD")
+            tailTexture:SetSize(32, 32)
+            tailTexture:SetVertexColor(colorValue[1], colorValue[2], colorValue[3], CursorGlow.db.profile.opacity)
+            tailTextures[tailIndex][i] = tailTexture
+        end
+    end
+    
 end
 
--- Initialize default settings with class color
-local defaultClassColor = GetDefaultClassColor() 
-
--- Define default values for profiles and global settings
-local profileDefaults = {
-    profile = {
-        operationMode = "enabledAlways",
-        enableExplosion = false,
-        explosionColor = {1, 1, 1},
-        explosionSize = 15,
-        explosionTextureSize = 10,
-        explosionTexture = "ring1",
-        opacity = 1,
-        minSize = 16,
-        maxSize = 175,
-        texture = "ring1",
-        color = "white",
-        enableTail = false,
-        tailLength = 60,
-		numTails = 1,          
-        tailSpacing = 10,      
-        minimap = { hide = false },
-		pulseEnabled = false,
-        pulseMinSize = 50,
-        pulseMaxSize = 100,
-        pulseSpeed = 1,  
-    }
-}
-
-local globalDefaults = {
-    global = {
-        profileEnabled = false,
-    }
-}
-
-local charDefaults = {
-    char = {
-       lastSelectedProfile = nil,
-    }
-}
-
-local particles = {}
-
-textureOptions["explosionParticle"] = "Interface\\Addons\\CursorGlow\\Textures\\Test17.png"
-
-local particles = {}
-
-local function CreateParticle(textureKey)
-    local particle = CreateFrame("Frame", nil, UIParent)
-    particle:SetFrameStrata("TOOLTIP")
-    particle:SetSize(16, 16)
-
-    local texture = particle:CreateTexture(nil, "ARTWORK")
-    local texturePath = textureOptions[textureKey]
-    if not texturePath then
-       
-        return
-    end
-
-    texture:SetTexture(texturePath)  
-    texture:SetBlendMode("ADD")
-    texture:SetAllPoints(particle)
-
-    particle.texture = texture
-    particle:SetAlpha(1)  
-    texture:SetAlpha(1)   
-    particle:Hide()
-
-    return particle
-end
-
-local function UpdateExplosionTexture(textureKey)
-    if not textureKey then
-        return
-    end
-
-    local texturePath = textureOptions[textureKey]
-    if not texturePath then
-        return
-    end
-
-    particles = {}  
-    for i = 1, 100 do  
-        particles[i] = CreateParticle(textureKey)
+local function UpdateExplosionTextureSize(size)
+    for _, particle in ipairs(particles) do
+        particle:SetSize(size, size)
     end
 end
 
--- Function to trigger the explosion effect
-local function TriggerExplosion(cursorX, cursorY)
+-- Performance Profile for explosion
+local function TriggerExplosion(cursorX, cursorY)   
     local scale = UIParent:GetEffectiveScale()
-    local color = CursorGlow.db.profile.explosionColor  
-    local explosionSize = CursorGlow.db.profile.explosionSize or 15  
-    local textureSize = CursorGlow.db.profile.explosionTextureSize or 10  
-    local explosionTexture = CursorGlow.db.profile.explosionTexture or "ring1"  
+    local color = CursorGlow.db.profile.explosionColor
+    local explosionSize = CursorGlow.db.profile.explosionSize or 15
+    local textureSize = CursorGlow.db.profile.explosionTextureSize or 10
+    local explosionTexture = CursorGlow.db.profile.explosionTexture or "ring1"
 
-    -- Ensure particles are created with the correct texture
-    local function UpdateExplosionTexture(textureKey)
-        local texturePath = textureOptions[textureKey]
-        particles = {}  
-        for i = 1, 100 do  
-            local particle = CreateFrame("Frame", nil, UIParent)
-            particle:SetFrameStrata("TOOLTIP")
-            particle:SetSize(textureSize, textureSize)
-
-            local texture = particle:CreateTexture(nil, "ARTWORK")
-            texture:SetTexture(texturePath)
-            texture:SetBlendMode("ADD")
-            texture:SetAllPoints(particle)
-
-            particle.texture = texture
-            particle:SetAlpha(1)
-            texture:SetAlpha(1)
-            particle:Hide()
-
-            particles[i] = particle
-        end
-    end
-
-    UpdateExplosionTexture(explosionTexture)  
+    CreateExplosionParticles(explosionTexture, textureSize)
 
     for _, particle in ipairs(particles) do
         local angle = math.random() * 2 * math.pi
-        local distance = math.random(1, explosionSize)  
+        local distance = math.random(1, explosionSize)
         local xOffset = math.cos(angle) * distance
         local yOffset = math.sin(angle) * distance
 
         particle:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cursorX / scale, cursorY / scale)
-        particle:SetAlpha(1)  
-        particle.texture:SetAlpha(1)  
-        particle.texture:SetVertexColor(unpack(color))  
-        particle:SetSize(textureSize, textureSize)  
+        particle:SetAlpha(1)
+        particle.texture:SetAlpha(1)
+        particle.texture:SetVertexColor(unpack(color))
         particle:Show()
         particle:SetScript("OnUpdate", function(self, elapsed)
-            local speed = 30
-            local dx, dy = speed * xOffset * elapsed, speed * yOffset * elapsed
+            local dx, dy = EXPLOSION_SPEED * xOffset * elapsed, EXPLOSION_SPEED * yOffset * elapsed
             local currentX, currentY = self:GetCenter()
-            particle:SetPoint("CENTER", UIParent, "BOTTOMLEFT", currentX + dx, currentY + dy)
-            local currentAlpha = particle:GetAlpha() or 1
+            self:SetPoint("CENTER", UIParent, "BOTTOMLEFT", currentX + dx, currentY + dy)
+            local currentAlpha = self:GetAlpha() or 1
             local newAlpha = currentAlpha - (elapsed * 0.8)
-            if newAlpha <= 0 then
-                particle:Hide()  
-            else
-                particle:SetAlpha(newAlpha)  
-            end
+            if newAlpha <= 0 then self:Hide()
+            else self:SetAlpha(newAlpha) end
         end)
-    end
+    end   
 end
 
--- Click handler function that does not block interactions
 local function TriggerExplosionOnClick()
     local cursorX, cursorY = GetCursorPosition()
     TriggerExplosion(cursorX, cursorY)
 end
 
--- Create a dedicated frame for detecting global mouse events
+-- Mouse event frame
 local eventHandlerFrame = CreateFrame("Frame", nil, UIParent)
 eventHandlerFrame:RegisterEvent("GLOBAL_MOUSE_DOWN")
-
--- Event handler function
 eventHandlerFrame:SetScript("OnEvent", function(self, event, buttonName)
     if event == "GLOBAL_MOUSE_DOWN" and buttonName == "LeftButton" and CursorGlow.db.profile.enableExplosion then
         TriggerExplosionOnClick()
     end
 end)
 
-local function UpdateExplosionTextureSize(size)
-    for _, particle in ipairs(particles) do
-        particle:SetSize(size, size)  
-    end
-end
-
--- Create a DataBroker object for the minimap button
+-- Minimap Button
 local minimapButton = LDB:NewDataObject("CursorGlow", {
     type = "data source",
     text = "CursorGlow",
@@ -476,41 +264,66 @@ local minimapButton = LDB:NewDataObject("CursorGlow", {
         end
     end,
     OnTooltipShow = function(tooltip)
-        tooltip:AddLine("|cFF00FF00CursorGlow|r")  
-        tooltip:AddLine("|cFFFFFFFFLeft-click to open settings.|r")  
-        tooltip:AddLine("|cFFFFFFFFRight-click to toggle addon.|r")  
+        tooltip:AddLine("|cFF00FF00CursorGlow|r")
+        tooltip:AddLine("|cFFFFFFFFLeft-click to open settings.|r")
+        tooltip:AddLine("|cFFFFFFFFRight-click to toggle addon.|r")
     end,
 })
 
-function CursorGlow:ApplySettings()
-    local profile = self.db.profile
-    profile.minimap = profile.minimap or { hide = false }  
-    profile.explosionColor = profile.explosionColor or {1, 1, 1}  
-    profile.minSize = profile.minSize or 16  
-    profile.maxSize = profile.maxSize or 175  
+-- Profile Defaults
+local defaultClassColor = GetDefaultClassColor()
+local profileDefaults = {
+    profile = {
+        operationMode = "enabledAlways",
+        enableExplosion = false,
+        explosionColor = {1, 1, 1},
+        explosionSize = 15,
+        explosionTextureSize = 10,
+        explosionTexture = "ring1",
+        opacity = 1,
+        minSize = 16,
+        maxSize = 175,
+        texture = "ring1",
+        color = "white",
+        enableTail = false,
+        tailLength = 60,
+        numTails = 1,
+        tailSpacing = 10,
+        minimap = { hide = false },
+        pulseEnabled = false,
+        pulseMinSize = 50,
+        pulseMaxSize = 100,
+        pulseSpeed = 1,
+        combatOnly = false,
+        enabled = true,
+    }
+}
+local globalDefaults = { global = { profileEnabled = false } }
+local charDefaults = { char = { lastSelectedProfile = nil } }
 
+function CursorGlow:ApplySettings()
+    
+    local profile = self.db.profile
+    profile.minimap = profile.minimap or { hide = false }
+    profile.explosionColor = profile.explosionColor or {1, 1, 1}
+    profile.minSize = profile.minSize or 16
+    profile.maxSize = profile.maxSize or 175
     profile.pulseEnabled = profile.pulseEnabled or false
     profile.pulseMinSize = profile.pulseMinSize or 50
     profile.pulseMaxSize = profile.pulseMaxSize or 100
     profile.pulseSpeed = profile.pulseSpeed or 1
-
     UpdateTexture(profile.texture)
-    UpdateTextureColor(profile.color)
+    UpdateTextureColor()
     UpdateAddonVisibility()
-    CursorGlow.tailLength = CursorGlow.db.profile.tailLength or 60
+    CursorGlow.tailLength = profile.tailLength or 60
     InitializeTailTextures()
-
-    if profile.minimap.hide then
-        icon:Hide("CursorGlow")
-    else
-        icon:Show("CursorGlow")
-    end
+    if profile.minimap.hide then icon:Hide("CursorGlow") else icon:Show("CursorGlow") end   
 end
 
 function CursorGlow:SwitchProfile(forceGlobal, profileName)
     if profileName then
         self.db:SetProfile(profileName)
-        self.dbChar.char.lastSelectedProfile = profileName  
+        self.dbChar.char.lastSelectedProfile = profileName
     elseif forceGlobal or self.dbGlobal.global.profileEnabled then
         self.db:SetProfile("Global")
         self.dbGlobal.global.profileEnabled = true
@@ -518,30 +331,8 @@ function CursorGlow:SwitchProfile(forceGlobal, profileName)
         local characterProfileName = UnitName("player") .. " - " .. GetRealmName()
         self.db:SetProfile(characterProfileName)
         self.dbGlobal.global.profileEnabled = false
-        self.dbChar.char.lastSelectedProfile = characterProfileName  
+        self.dbChar.char.lastSelectedProfile = characterProfileName
     end
-
-    -- Ensure all necessary defaults are applied in the selected profile
-    local profile = self.db.profile
-    profile.operationMode = profile.operationMode or "enabledAlways"
-    profile.enableExplosion = profile.enableExplosion or false
-    profile.explosionColor = profile.explosionColor or {1, 1, 1}
-    profile.explosionSize = profile.explosionSize or 15
-    profile.explosionTextureSize = profile.explosionTextureSize or 10
-    profile.explosionTexture = profile.explosionTexture or "ring1"
-    profile.opacity = profile.opacity or 1
-    profile.minSize = profile.minSize or 16
-    profile.maxSize = profile.maxSize or 175
-    profile.texture = profile.texture or "ring1"
-    profile.color = profile.color or (forceGlobal and {1, 1, 1} or GetDefaultClassColor())
-    profile.enableTail = profile.enableTail or false
-    profile.tailLength = profile.tailLength or 60
-    profile.minimap = profile.minimap or { hide = false }
-    profile.pulseEnabled = profile.pulseEnabled or false
-    profile.pulseMinSize = profile.pulseMinSize or 50
-    profile.pulseMaxSize = profile.pulseMaxSize or 100
-    profile.pulseSpeed = profile.pulseSpeed or 1
-
     self:ApplySettings()
 end
 
@@ -733,9 +524,13 @@ local options = {
                     },
                     get = function() return CursorGlow.db.profile.explosionTexture end,
                     set = function(_, val)
-                        CursorGlow.db.profile.explosionTexture = val
-                        UpdateExplosionTexture(val)
-                    end,
+                     CursorGlow.db.profile.explosionTexture = val
+                     CreateExplosionParticles(val, CursorGlow.db.profile.explosionTextureSize or 10)
+                    local color = CursorGlow.db.profile.explosionColor or {1, 1, 1}
+                        for _, particle in ipairs(particles) do
+                            particle.texture:SetVertexColor(unpack(color))
+                            end
+                         end,
                     disabled = function() return not CursorGlow.db.profile.enableExplosion end,
                 },
             },
@@ -1009,14 +804,14 @@ local options = {
     },
 }
 
-function CursorGlow:OnInitialize()
-    self.db = LibStub("AceDB-3.0"):New("CursorGlowDB", profileDefaults)
-    self.dbChar = LibStub("AceDB-3.0"):New("CursorGlowCharDB", charDefaults)
-    self.dbGlobal = LibStub("AceDB-3.0"):New("CursorGlowGlobalDB", globalDefaults)
+-- Initialization
+function CursorGlow:OnInitialize()   
+    self.db = AceDB:New("CursorGlowDB", profileDefaults)
+    self.dbChar = AceDB:New("CursorGlowCharDB", charDefaults)
+    self.dbGlobal = AceDB:New("CursorGlowGlobalDB", globalDefaults)
     self.db.RegisterCallback(self, "OnProfileChanged", "OnProfileChanged")
     self.db.RegisterCallback(self, "OnProfileCopied", "OnProfileChanged")
     self.db.RegisterCallback(self, "OnProfileReset", "OnProfileChanged")
-   
     if self.dbGlobal.global.profileEnabled then
         self.db:SetProfile("Global")
     elseif self.dbChar.char.lastSelectedProfile then
@@ -1025,32 +820,24 @@ function CursorGlow:OnInitialize()
         local characterProfileName = UnitName("player") .. " - " .. GetRealmName()
         self.db:SetProfile(characterProfileName)
     end
-
     self:ApplySettings()
-
     if minimapButton and icon then
         icon:Register("CursorGlow", minimapButton, self.db.profile.minimap)
     else
-        print("Error: Minimap button or LibDBIcon not properly initialized.")
+        DEFAULT_CHAT_FRAME:AddMessage("CursorGlow: Error initializing minimap button or LibDBIcon.")
     end
-
-    if self.db.profile.minimap and self.db.profile.minimap.hide then
-        icon:Hide("CursorGlow")
-    else
-        icon:Show("CursorGlow")
-end
-
+    if self.db.profile.minimap and self.db.profile.minimap.hide then icon:Hide("CursorGlow") else icon:Show("CursorGlow") end
     AceConfig:RegisterOptionsTable("CursorGlow", options)
     AceConfigDialog:AddToBlizOptions("CursorGlow", "CursorGlow")
-
     local profilesOptions = AceDBOptions:GetOptionsTable(self.db)
-
     AceConfig:RegisterOptionsTable("CursorGlow Profiles", profilesOptions)
-    AceConfigDialog:AddToBlizOptions("CursorGlow Profiles", "Profiles", "CursorGlow")
+    AceConfigDialog:AddToBlizOptions("CursorGlow Profiles", "Profiles", "CursorGlow")   
 end
 
 frame:RegisterEvent("PLAYER_REGEN_DISABLED")
 frame:RegisterEvent("PLAYER_REGEN_ENABLED")
+frame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
+frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 
 function HandleCombatState()
     if CursorGlow.db.profile.combatOnly then
@@ -1059,174 +846,136 @@ function HandleCombatState()
 end
 
 frame:SetScript("OnEvent", function(self, event, ...)
+    
     if event == "PLAYER_REGEN_DISABLED" or event == "PLAYER_REGEN_ENABLED" then
         UpdateAddonVisibility()
     elseif event == "ZONE_CHANGED_NEW_AREA" or event == "PLAYER_ENTERING_WORLD" then
         UpdateTexture(CursorGlow.db.profile.texture)
-        UpdateTextureColor(CursorGlow.db.profile.color)
+        UpdateTextureColor()
         UpdateAddonVisibility()
-        speed = 0
-    end
+        CursorGlow.speed = 0
+    end   
 end)
 
 function CursorGlow:DisableTailEffect()
     if CursorGlow.db.profile.enableTail then
         for _, tailGroup in pairs(tailTextures or {}) do
-            if tailGroup then
-                for _, tailTexture in ipairs(tailGroup or {}) do
-                    if tailTexture and tailTexture.Hide then
-                        tailTexture:Hide()
-                    end
-                end
+            for _, tailTexture in ipairs(tailGroup or {}) do
+                tailTexture:Hide()
             end
         end
-        tailPositions = {}
+        wipe(tailPositions)
     end
 end
 
-frame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
-frame:RegisterEvent("PLAYER_ENTERING_WORLD")
-
--- Modified OnUpdate function to include pulse effect
+-- OnUpdate Handler (Profiled)
+local speed, stationaryTime, pulseElapsedTime, prevX, prevY = 0, 0, 0
 frame:SetScript("OnUpdate", function(self, elapsed)
     local profile = CursorGlow.db.profile
     local size = math.max(profile.minSize, profile.maxSize)
     local opacity = profile.opacity or 1
+    local scale = UIParent:GetEffectiveScale()
+    local cursorX, cursorY = GetCursorPosition()
+    prevX = prevX or cursorX
+    prevY = prevY or cursorY
 
     if profile.operationMode == "enabledAlwaysOnCursor" then
-        local scale = UIParent:GetEffectiveScale()
-        local cursorX, cursorY = GetCursorPosition()
         texture:SetHeight(size)
         texture:SetWidth(size)
         texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cursorX / scale, cursorY / scale)
+        texture:Show()        
+        return
+    end
+
+    CursorGlow.tailLength = tonumber(CursorGlow.tailLength) or 60
+    local numTails = tonumber(profile.numTails) or 1
+    local tailSpacing = tonumber(profile.tailSpacing) or 10
+    local dX, dY = cursorX - prevX, cursorY - prevY
+    local distance = math.sqrt(dX * dX + dY * dY)
+
+    if elapsed == 0 then elapsed = 0.0001 end
+    local decayFactor = 2048 ^ -elapsed
+    speed = math.min(decayFactor * speed + (1 - decayFactor) * distance / elapsed, 1024)
+
+    if distance > 0 then
+        stationaryTime = 0
+        pulseElapsedTime = 0
+        size = math.max(math.min(speed / 6, profile.maxSize), profile.minSize)
+        texture:SetHeight(size)
+        texture:SetWidth(size)
+        texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", (cursorX + 0.5 * dX) / scale, (cursorY + 0.5 * dY) / scale)
         texture:Show()
-    else
-        CursorGlow.tailLength = tonumber(CursorGlow.tailLength) or 60
-        local numTails = tonumber(profile.numTails) or 1
-        local tailSpacing = tonumber(profile.tailSpacing) or 10
-
-        local cursorX, cursorY = GetCursorPosition()
-        prevX = prevX or cursorX
-        prevY = prevY or cursorY
-
-        local dX, dY = cursorX - prevX, cursorY - prevY
-        local distance = math.sqrt(dX * dX + dY * dY)
-
-        if elapsed == 0 then
-            elapsed = 0.0001
-        end
-
-        local decayFactor = 2048 ^ -elapsed
-        speed = math.min(decayFactor * speed + (1 - decayFactor) * distance / elapsed, 1024)
-
-        local scale = UIParent:GetEffectiveScale()
-
-        if distance > 0 then
-            stationaryTime = 0
-            pulseElapsedTime = 0  
-
-            size = math.max(math.min(speed / 6, profile.maxSize), profile.minSize)
-            texture:SetHeight(size)
-            texture:SetWidth(size)
-            texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", (cursorX + 0.5 * dX) / scale, (cursorY + 0.5 * dY) / scale)
-            texture:Show()
-
-            if profile.enableTail then
-                for tailIndex = 1, numTails do
-                    local offset = (tailIndex - (numTails + 1) / 2) * tailSpacing * scale
-                    local cursorPos = { x = (cursorX + offset) / scale, y = cursorY / scale }
-
-                    tailPositions[tailIndex] = tailPositions[tailIndex] or {}
-                    table.insert(tailPositions[tailIndex], 1, cursorPos)
-                    if #tailPositions[tailIndex] > CursorGlow.tailLength then
-                        table.remove(tailPositions[tailIndex])
+        if profile.enableTail then
+            for tailIndex = 1, numTails do
+                local offset = (tailIndex - (numTails + 1) / 2) * tailSpacing * scale
+                local cursorPos = { x = (cursorX + offset) / scale, y = cursorY / scale }
+                tailPositions[tailIndex] = tailPositions[tailIndex] or {}
+                table.insert(tailPositions[tailIndex], 1, cursorPos)
+                if #tailPositions[tailIndex] > CursorGlow.tailLength then table.remove(tailPositions[tailIndex]) end
+                tailTextures[tailIndex] = tailTextures[tailIndex] or {}
+                for i, tailTexture in ipairs(tailTextures[tailIndex]) do
+                    local pos = tailPositions[tailIndex][i]
+                    if pos and tailTexture then
+                        tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)
+                        local alpha = (CursorGlow.tailLength - i + 1) / CursorGlow.tailLength
+                        tailTexture:SetAlpha(alpha * opacity)
+                        tailTexture:SetSize(size, size)
+                        tailTexture:Show()
+                    elseif tailTexture then
+                        tailTexture:Hide()
                     end
-
-                    tailTextures[tailIndex] = tailTextures[tailIndex] or {}
-                    for i, tailTexture in ipairs(tailTextures[tailIndex]) do
-                        local pos = tailPositions[tailIndex][i]
+                end
+            end
+        else
+            for _, tailGroup in pairs(tailTextures) do
+                for _, tailTexture in ipairs(tailGroup or {}) do tailTexture:Hide() end
+            end
+            wipe(tailPositions)
+        end
+    else
+        stationaryTime = stationaryTime + elapsed
+        if profile.pulseEnabled then
+            if stationaryTime >= 0.5 then
+                pulseElapsedTime = pulseElapsedTime + elapsed
+                local pulseSpeed = profile.pulseSpeed or 1
+                local pulseProgress = (math.sin(pulseElapsedTime * pulseSpeed * math.pi * 2) + 1) / 2
+                local pulseSize = profile.pulseMinSize + (profile.pulseMaxSize - profile.pulseMinSize) * pulseProgress
+                texture:SetHeight(pulseSize)
+                texture:SetWidth(pulseSize)
+                texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cursorX / scale, cursorY / scale)
+                texture:SetAlpha(opacity)
+                texture:Show()
+            else
+                texture:Hide()
+            end
+        else
+            texture:Hide()
+        end
+        if profile.enableTail then
+            if stationaryTime >= 1 then
+                wipe(tailPositions)
+            else
+                for tailIndex = 1, numTails do
+                    for i, tailTexture in ipairs(tailTextures[tailIndex] or {}) do
+                        local pos = tailPositions[tailIndex] and tailPositions[tailIndex][i]
                         if pos and tailTexture then
                             tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)
-                            local alpha = (CursorGlow.tailLength - i + 1) / CursorGlow.tailLength
+                            local alpha = ((CursorGlow.tailLength - i + 1) / CursorGlow.tailLength) * math.max(1 - stationaryTime, 0)
                             tailTexture:SetAlpha(alpha * opacity)
-                            tailTexture:SetSize(size, size)
-
-                            tailTexture:Show()
+                            tailTexture:SetSize(size * alpha, size * alpha)
+                            if alpha > 0 then tailTexture:Show() else tailTexture:Hide() end
                         elseif tailTexture then
                             tailTexture:Hide()
                         end
                     end
                 end
-            else
-                for _, tailGroup in pairs(tailTextures) do
-                    for _, tailTexture in ipairs(tailGroup or {}) do
-                        if tailTexture then
-                            tailTexture:Hide()
-                        end
-                    end
-                end
-                tailPositions = {}
             end
         else
-            stationaryTime = stationaryTime + elapsed
-
-            if profile.pulseEnabled then
-                if stationaryTime >= 0.5 then
-                    pulseElapsedTime = pulseElapsedTime + elapsed
-                    local pulseSpeed = profile.pulseSpeed or 1
-                    local pulseProgress = (math.sin(pulseElapsedTime * pulseSpeed * math.pi * 2) + 1) / 2
-                    local pulseSize = profile.pulseMinSize + (profile.pulseMaxSize - profile.pulseMinSize) * pulseProgress
-                    texture:SetHeight(pulseSize)
-                    texture:SetWidth(pulseSize)
-                    texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cursorX / scale, cursorY / scale)
-                    texture:SetAlpha(opacity)
-                    texture:Show()
-                else
-                    texture:Hide()
-                end
-            else
-                texture:Hide()
+            for _, tailGroup in pairs(tailTextures) do
+                for _, tailTexture in ipairs(tailGroup or {}) do tailTexture:Hide() end
             end
-
-            if profile.enableTail then
-                local numTails = profile.numTails or 1
-
-                if stationaryTime >= 1 then
-                    tailPositions = {}
-                else
-                    for tailIndex = 1, numTails do
-                        for i, tailTexture in ipairs(tailTextures[tailIndex] or {}) do
-                            local pos = tailPositions[tailIndex] and tailPositions[tailIndex][i]
-                            if pos and tailTexture then
-                                tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)
-                                local alpha = ((CursorGlow.tailLength - i + 1) / CursorGlow.tailLength) * math.max(1 - stationaryTime, 0)
-                                tailTexture:SetAlpha(alpha * opacity)
-                                tailTexture:SetSize(size * alpha, size * alpha)
-                                if alpha > 0 then
-                                    tailTexture:Show()
-                                else
-                                    tailTexture:Hide()
-                                end
-                            elseif tailTexture then
-                                tailTexture:Hide()
-                            end
-                        end
-                    end
-                end
-            else
-                for _, tailGroup in pairs(tailTextures) do
-                    for _, tailTexture in ipairs(tailGroup or {}) do
-                        if tailTexture then
-                            tailTexture:Hide()
-                        end
-                    end
-                end
-                tailPositions = {}
-            end
+            wipe(tailPositions)
         end
-
-        prevX = cursorX
-        prevY = cursorY
     end
+    prevX, prevY = cursorX, cursorY   
 end)
-
