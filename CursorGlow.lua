@@ -1024,46 +1024,48 @@ frame:SetScript("OnUpdate", function(self, elapsed)
                             local hue = ((i * 0.1 + GetTime() * 0.5) % 1)
                             currentColor[1], currentColor[2], currentColor[3] = HSVtoRGB(hue, 1, 1)
                         elseif tailStyle == "pulse" then
-                            local pulseScale = 1 + 0.3 * math.sin(GetTime() * 5 + i * 0.2)
+                            local pulseScale = 1 + 0.4 * math.sin(GetTime() * 6 + i * 0.3)
                             currentSize = currentSize * pulseScale
                         elseif tailStyle == "spiral" then
-                            local angle = i * 0.3 + GetTime() * 2
-                            local spiralRadius = i * 2
+                            local angle = i * 0.4 + GetTime() * 3
+                            local spiralRadius = math.min(i * 1.5, 20)
                             currentX = currentX + math.cos(angle) * spiralRadius
                             currentY = currentY + math.sin(angle) * spiralRadius
                         elseif tailStyle == "wave" then
-                            local perpX, perpY = GetPerpendicularOffset(dX, dY, math.sin(GetTime() * 3 + i * 0.5) * 15)
+                            local perpX, perpY = GetPerpendicularOffset(dX, dY, math.sin(GetTime() * 4 + i * 0.4) * 12)
                             currentX = currentX + perpX
                             currentY = currentY + perpY
                         elseif tailStyle == "shadow" then
-                            local shadowOffset = i * 0.5
+                            local shadowOffset = i * 0.8
                             currentX = currentX - shadowOffset
                             currentY = currentY - shadowOffset
-                            currentColor = {0.2, 0.2, 0.2}
+                            currentColor = {0.15, 0.15, 0.15}
+                            currentOpacity = currentOpacity * 0.8
                         elseif tailStyle == "comet" then
-                            local cometFactor = math.max(0, 1 - (i / CursorGlow.tailLength) * 2)
-                            currentSize = currentSize * (0.3 + 0.7 * cometFactor)
-                            currentOpacity = currentOpacity * cometFactor
+                            local cometFactor = math.max(0, 1 - (i / CursorGlow.tailLength) * 3)
+                            currentSize = currentSize * (0.2 + 0.8 * cometFactor)
+                            currentOpacity = currentOpacity * (cometFactor * cometFactor)
                         elseif tailStyle == "sparkle" then
-                            local sparkle = math.random() * 0.5 + 0.5
+                            local sparkle = 0.3 + math.random() * 0.7
+                            local flicker = math.sin(GetTime() * 8 + i * 1.2) * 0.3 + 0.7
                             currentSize = currentSize * sparkle
-                            currentOpacity = currentOpacity * sparkle
+                            currentOpacity = currentOpacity * flicker
                         elseif tailStyle == "confetti" then
-                            if math.random() > 0.7 then
-                                local confettiX = currentX + (math.random() - 0.5) * 20
-                                local confettiY = currentY + (math.random() - 0.5) * 20
+                            if math.random() > 0.6 then
+                                local confettiX = currentX + (math.random() - 0.5) * 25
+                                local confettiY = currentY + (math.random() - 0.5) * 25
                                 currentX, currentY = confettiX, confettiY
-                                currentSize = currentSize * 0.5
+                                currentSize = currentSize * (0.3 + math.random() * 0.4)
                                 currentColor[1] = math.random()
-                                currentColor[2] = math.random()
+                                currentColor[2] = math.random() 
                                 currentColor[3] = math.random()
                             else
                                 currentOpacity = 0
                             end
                         elseif tailStyle == "helix" then
-                            local angle1 = i * 0.4 + GetTime() * 2
-                            local angle2 = i * 0.4 - GetTime() * 2
-                            local helixRadius = 8
+                            local angle1 = i * 0.5 + GetTime() * 2.5
+                            local angle2 = i * 0.5 - GetTime() * 2.5
+                            local helixRadius = 10
                             if tailIndex % 2 == 1 then
                                 currentX = currentX + math.cos(angle1) * helixRadius
                                 currentY = currentY + math.sin(angle1) * helixRadius
@@ -1072,7 +1074,7 @@ frame:SetScript("OnUpdate", function(self, elapsed)
                                 currentY = currentY + math.sin(angle2) * helixRadius
                             end
                         elseif tailStyle == "bouncy" then
-                            local bounceY = math.sin(GetTime() * 4 + i * 0.3) * 10
+                            local bounceY = math.sin(GetTime() * 5 + i * 0.4) * 8
                             currentY = currentY + bounceY
                         end
                         
@@ -1150,12 +1152,16 @@ end
                                 local hue = ((i * 0.1 + GetTime() * 0.5) % 1)
                                 currentColor[1], currentColor[2], currentColor[3] = HSVtoRGB(hue, 1, 1)
                             elseif tailStyle == "pulse" then
-                                local pulseScale = 1 + 0.3 * math.sin(GetTime() * 5 + i * 0.2)
+                                local pulseScale = 1 + 0.4 * math.sin(GetTime() * 6 + i * 0.3)
                                 currentSize = currentSize * pulseScale
                             elseif tailStyle == "sparkle" then
-                                local sparkle = math.random() * 0.5 + 0.5
+                                local sparkle = 0.3 + math.random() * 0.7
+                                local flicker = math.sin(GetTime() * 8 + i * 1.2) * 0.3 + 0.7
                                 currentSize = currentSize * sparkle
-                                currentOpacity = currentOpacity * sparkle
+                                currentOpacity = currentOpacity * flicker
+                            elseif tailStyle == "shadow" then
+                                currentColor = {0.15, 0.15, 0.15}
+                                currentOpacity = currentOpacity * 0.8
                             end
                             
                             tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", currentX, currentY)

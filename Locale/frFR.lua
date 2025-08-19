@@ -54,6 +54,21 @@ L["Number of Tails"] = "Nombre de Queues"
 L["Select the number of tails"] = "Sélectionnez le nombre de queues"
 L["Tail Spacing"] = "Espacement entre Queues"
 L["Adjust the spacing between multiple tails"] = "Ajustez l'espacement entre plusieurs queues"
+L["Tail Style"] = "Style de Queue"
+L["Select the visual style for the cursor tail"] = "Sélectionnez le style visuel pour la queue du curseur"
+
+-- Tail Style Options
+L["Standard"] = "Standard"
+L["Rainbow Trail"] = "Traînée Arc-en-ciel"
+L["Pulse Tail"] = "Queue Pulsante"
+L["Twist Spiral"] = "Spirale Torsadée"
+L["Wave Tail"] = "Queue Ondulée"
+L["Trailing Shadow"] = "Ombre Traînante"
+L["Comet Tail"] = "Queue de Comète"
+L["Sparkle Flicker"] = "Scintillement"
+L["Confetti Trail"] = "Traînée de Confettis"
+L["Double Helix"] = "Double Hélice"
+L["Bouncy Tail"] = "Queue Rebondissante"
 
 -- Pulse Effect Settings
 L["Pulse Effect Settings"] = "Paramètres de l'Effet de Pulsation"

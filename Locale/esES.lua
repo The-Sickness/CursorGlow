@@ -54,6 +54,21 @@ L["Number of Tails"] = "Número de Colas"
 L["Select the number of tails"] = "Selecciona el número de colas"
 L["Tail Spacing"] = "Espaciado entre Colas"
 L["Adjust the spacing between multiple tails"] = "Ajusta el espaciado entre múltiples colas"
+L["Tail Style"] = "Estilo de Cola"
+L["Select the visual style for the cursor tail"] = "Selecciona el estilo visual para la cola del cursor"
+
+-- Tail Style Options
+L["Standard"] = "Estándar"
+L["Rainbow Trail"] = "Rastro Arcoíris"
+L["Pulse Tail"] = "Cola Pulsante"
+L["Twist Spiral"] = "Espiral Retorcida"
+L["Wave Tail"] = "Cola Ondulada"
+L["Trailing Shadow"] = "Sombra Rastrera"
+L["Comet Tail"] = "Cola de Cometa"
+L["Sparkle Flicker"] = "Destellos"
+L["Confetti Trail"] = "Rastro de Confeti"
+L["Double Helix"] = "Doble Hélice"
+L["Bouncy Tail"] = "Cola Saltarina"
 
 -- Pulse Effect Settings
 L["Pulse Effect Settings"] = "Configuración del Efecto de Pulso"

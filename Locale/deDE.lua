@@ -54,6 +54,21 @@ L["Number of Tails"] = "Anzahl der Schweife"
 L["Select the number of tails"] = "Wählen Sie die Anzahl der Schweife"
 L["Tail Spacing"] = "Abstand zwischen den Schweifen"
 L["Adjust the spacing between multiple tails"] = "Passen Sie den Abstand zwischen mehreren Schweifen an"
+L["Tail Style"] = "Schweif-Stil"
+L["Select the visual style for the cursor tail"] = "Wählen Sie den visuellen Stil für den Mauszeiger-Schweif"
+
+-- Tail Style Options
+L["Standard"] = "Standard"
+L["Rainbow Trail"] = "Regenbogen-Spur"
+L["Pulse Tail"] = "Puls-Schweif"
+L["Twist Spiral"] = "Dreht Spirale"
+L["Wave Tail"] = "Wellen-Schweif"
+L["Trailing Shadow"] = "Nachziehender Schatten"
+L["Comet Tail"] = "Kometen-Schweif"
+L["Sparkle Flicker"] = "Funkeln"
+L["Confetti Trail"] = "Konfetti-Spur"
+L["Double Helix"] = "Doppelhelix"
+L["Bouncy Tail"] = "Hüpfender Schweif"
 
 -- Puls-Effekt-Einstellungen
 L["Pulse Effect Settings"] = "Puls-Effekt-Einstellungen"

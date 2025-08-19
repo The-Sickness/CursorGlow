@@ -54,6 +54,21 @@ L["Number of Tails"] = "Количество хвостов"
 L["Select the number of tails"] = "Выберите количество хвостов"
 L["Tail Spacing"] = "Интервал между хвостами"
 L["Adjust the spacing between multiple tails"] = "Настройте интервал между несколькими хвостами"
+L["Tail Style"] = "Стиль хвоста"
+L["Select the visual style for the cursor tail"] = "Выберите визуальный стиль для хвоста курсора"
+
+-- Tail Style Options
+L["Standard"] = "Стандартный"
+L["Rainbow Trail"] = "Радужный след"
+L["Pulse Tail"] = "Пульсирующий хвост"
+L["Twist Spiral"] = "Закрученная спираль"
+L["Wave Tail"] = "Волнистый хвост"
+L["Trailing Shadow"] = "Тянущаяся тень"
+L["Comet Tail"] = "Хвост кометы"
+L["Sparkle Flicker"] = "Мерцание"
+L["Confetti Trail"] = "След конфетти"
+L["Double Helix"] = "Двойная спираль"
+L["Bouncy Tail"] = "Подпрыгивающий хвост"
 
 -- Pulse Effect Settings
 L["Pulse Effect Settings"] = "Настройки эффекта пульсации"
