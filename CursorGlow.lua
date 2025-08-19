@@ -294,6 +294,7 @@ local profileDefaults = {
         tailLength = 60,
         numTails = 1,
         tailSpacing = 10,
+        tailStyle = "standard",
         minimap = { hide = false },
         pulseEnabled = false,
         pulseMinSize = 50,
@@ -764,6 +765,30 @@ local options = {
                     end,
                     disabled = function() return not CursorGlow.db.profile.enableTail end,
                 },
+                tailStyle = {
+                    type = 'select',
+                    name = L["Tail Style"],
+                    desc = L["Select the visual style for the cursor tail"],
+                    order = 5,
+                    values = {
+                        standard = L["Standard"],
+                        rainbow = L["Rainbow Trail"],
+                        pulse = L["Pulse Tail"],
+                        spiral = L["Twist Spiral"],
+                        wave = L["Wave Tail"],
+                        shadow = L["Trailing Shadow"],
+                        comet = L["Comet Tail"],
+                        sparkle = L["Sparkle Flicker"],
+                        confetti = L["Confetti Trail"],
+                        helix = L["Double Helix"],
+                        bouncy = L["Bouncy Tail"],
+                    },
+                    get = function() return CursorGlow.db.profile.tailStyle or "standard" end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.tailStyle = val
+                    end,
+                    disabled = function() return not CursorGlow.db.profile.enableTail end,
+                },
             },
         },
 
@@ -899,6 +924,41 @@ function CursorGlow:DisableTailEffect()
     end
 end
 
+-- Helper functions for advanced tail effects
+local function HSVtoRGB(h, s, v)
+    local r, g, b
+    local i = math.floor(h * 6)
+    local f = h * 6 - i
+    local p = v * (1 - s)
+    local q = v * (1 - f * s)
+    local t = v * (1 - (1 - f) * s)
+    
+    local imod = i % 6
+    if imod == 0 then
+        r, g, b = v, t, p
+    elseif imod == 1 then
+        r, g, b = q, v, p
+    elseif imod == 2 then
+        r, g, b = p, v, t
+    elseif imod == 3 then
+        r, g, b = p, q, v
+    elseif imod == 4 then
+        r, g, b = t, p, v
+    elseif imod == 5 then
+        r, g, b = v, p, q
+    end
+    
+    return r, g, b
+end
+
+local function GetPerpendicularOffset(dX, dY, distance)
+    local length = math.sqrt(dX * dX + dY * dY)
+    if length == 0 then return 0, 0 end
+    local perpX = -dY / length * distance
+    local perpY = dX / length * distance
+    return perpX, perpY
+end
+
 -- OnUpdate Handler with Idle ZZZ logic
 local speed, stationaryTime, pulseElapsedTime, prevX, prevY = 0, 0, 0
 frame:SetScript("OnUpdate", function(self, elapsed)
@@ -940,6 +1000,7 @@ frame:SetScript("OnUpdate", function(self, elapsed)
         texture:Show()
         zzzFont:Hide()
         if profile.enableTail then
+            local tailStyle = profile.tailStyle or "standard"
             for tailIndex = 1, numTails do
                 local offset = (tailIndex - (numTails + 1) / 2) * tailSpacing * scale
                 local cursorPos = { x = (cursorX + offset) / scale, y = cursorY / scale }
@@ -947,13 +1008,78 @@ frame:SetScript("OnUpdate", function(self, elapsed)
                 table.insert(tailPositions[tailIndex], 1, cursorPos)
                 if #tailPositions[tailIndex] > CursorGlow.tailLength then table.remove(tailPositions[tailIndex]) end
                 tailTextures[tailIndex] = tailTextures[tailIndex] or {}
+                
                 for i, tailTexture in ipairs(tailTextures[tailIndex]) do
                     local pos = tailPositions[tailIndex][i]
                     if pos and tailTexture then
-                        tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)
                         local alpha = (CursorGlow.tailLength - i + 1) / CursorGlow.tailLength
-                        tailTexture:SetAlpha(alpha * opacity)
-                        tailTexture:SetSize(size, size)
+                        local currentSize = size
+                        local currentOpacity = alpha * opacity
+                        local currentX, currentY = pos.x, pos.y
+                        local baseColorValue = colorOptions[profile.color] or {1, 1, 1}
+                        local currentColor = {baseColorValue[1], baseColorValue[2], baseColorValue[3]}
+                        
+                        -- Apply style-specific effects
+                        if tailStyle == "rainbow" then
+                            local hue = ((i * 0.1 + GetTime() * 0.5) % 1)
+                            currentColor[1], currentColor[2], currentColor[3] = HSVtoRGB(hue, 1, 1)
+                        elseif tailStyle == "pulse" then
+                            local pulseScale = 1 + 0.3 * math.sin(GetTime() * 5 + i * 0.2)
+                            currentSize = currentSize * pulseScale
+                        elseif tailStyle == "spiral" then
+                            local angle = i * 0.3 + GetTime() * 2
+                            local spiralRadius = i * 2
+                            currentX = currentX + math.cos(angle) * spiralRadius
+                            currentY = currentY + math.sin(angle) * spiralRadius
+                        elseif tailStyle == "wave" then
+                            local perpX, perpY = GetPerpendicularOffset(dX, dY, math.sin(GetTime() * 3 + i * 0.5) * 15)
+                            currentX = currentX + perpX
+                            currentY = currentY + perpY
+                        elseif tailStyle == "shadow" then
+                            local shadowOffset = i * 0.5
+                            currentX = currentX - shadowOffset
+                            currentY = currentY - shadowOffset
+                            currentColor = {0.2, 0.2, 0.2}
+                        elseif tailStyle == "comet" then
+                            local cometFactor = math.max(0, 1 - (i / CursorGlow.tailLength) * 2)
+                            currentSize = currentSize * (0.3 + 0.7 * cometFactor)
+                            currentOpacity = currentOpacity * cometFactor
+                        elseif tailStyle == "sparkle" then
+                            local sparkle = math.random() * 0.5 + 0.5
+                            currentSize = currentSize * sparkle
+                            currentOpacity = currentOpacity * sparkle
+                        elseif tailStyle == "confetti" then
+                            if math.random() > 0.7 then
+                                local confettiX = currentX + (math.random() - 0.5) * 20
+                                local confettiY = currentY + (math.random() - 0.5) * 20
+                                currentX, currentY = confettiX, confettiY
+                                currentSize = currentSize * 0.5
+                                currentColor[1] = math.random()
+                                currentColor[2] = math.random()
+                                currentColor[3] = math.random()
+                            else
+                                currentOpacity = 0
+                            end
+                        elseif tailStyle == "helix" then
+                            local angle1 = i * 0.4 + GetTime() * 2
+                            local angle2 = i * 0.4 - GetTime() * 2
+                            local helixRadius = 8
+                            if tailIndex % 2 == 1 then
+                                currentX = currentX + math.cos(angle1) * helixRadius
+                                currentY = currentY + math.sin(angle1) * helixRadius
+                            else
+                                currentX = currentX + math.cos(angle2) * helixRadius
+                                currentY = currentY + math.sin(angle2) * helixRadius
+                            end
+                        elseif tailStyle == "bouncy" then
+                            local bounceY = math.sin(GetTime() * 4 + i * 0.3) * 10
+                            currentY = currentY + bounceY
+                        end
+                        
+                        tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", currentX, currentY)
+                        tailTexture:SetAlpha(currentOpacity)
+                        tailTexture:SetSize(currentSize, currentSize)
+                        tailTexture:SetVertexColor(currentColor[1], currentColor[2], currentColor[3], 1)
                         tailTexture:Show()
                     elseif tailTexture then
                         tailTexture:Hide()
@@ -1007,14 +1133,35 @@ end
             if stationaryTime >= 1 then
                 wipe(tailPositions)
             else
+                local tailStyle = profile.tailStyle or "standard"
                 for tailIndex = 1, numTails do
                     for i, tailTexture in ipairs(tailTextures[tailIndex] or {}) do
                         local pos = tailPositions[tailIndex] and tailPositions[tailIndex][i]
                         if pos and tailTexture then
-                            tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)
                             local alpha = ((CursorGlow.tailLength - i + 1) / CursorGlow.tailLength) * math.max(1 - stationaryTime, 0)
-                            tailTexture:SetAlpha(alpha * opacity)
-                            tailTexture:SetSize(size * alpha, size * alpha)
+                            local currentSize = size * alpha
+                            local currentOpacity = alpha * opacity
+                            local currentX, currentY = pos.x, pos.y
+                            local baseColorValue = colorOptions[profile.color] or {1, 1, 1}
+                            local currentColor = {baseColorValue[1], baseColorValue[2], baseColorValue[3]}
+                            
+                            -- Apply style-specific effects even when stationary
+                            if tailStyle == "rainbow" then
+                                local hue = ((i * 0.1 + GetTime() * 0.5) % 1)
+                                currentColor[1], currentColor[2], currentColor[3] = HSVtoRGB(hue, 1, 1)
+                            elseif tailStyle == "pulse" then
+                                local pulseScale = 1 + 0.3 * math.sin(GetTime() * 5 + i * 0.2)
+                                currentSize = currentSize * pulseScale
+                            elseif tailStyle == "sparkle" then
+                                local sparkle = math.random() * 0.5 + 0.5
+                                currentSize = currentSize * sparkle
+                                currentOpacity = currentOpacity * sparkle
+                            end
+                            
+                            tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", currentX, currentY)
+                            tailTexture:SetAlpha(currentOpacity)
+                            tailTexture:SetSize(currentSize, currentSize)
+                            tailTexture:SetVertexColor(currentColor[1], currentColor[2], currentColor[3], 1)
                             if alpha > 0 then tailTexture:Show() else tailTexture:Hide() end
                         elseif tailTexture then
                             tailTexture:Hide()

@@ -54,6 +54,21 @@ L["Number of Tails"] = "Number of Tails"
 L["Select the number of tails"] = "Select the number of tails"
 L["Tail Spacing"] = "Tail Spacing"
 L["Adjust the spacing between multiple tails"] = "Adjust the spacing between multiple tails"
+L["Tail Style"] = "Tail Style"
+L["Select the visual style for the cursor tail"] = "Select the visual style for the cursor tail"
+
+-- Tail Style Options
+L["Standard"] = "Standard"
+L["Rainbow Trail"] = "Rainbow Trail"
+L["Pulse Tail"] = "Pulse Tail"
+L["Twist Spiral"] = "Twist Spiral"
+L["Wave Tail"] = "Wave Tail"
+L["Trailing Shadow"] = "Trailing Shadow"
+L["Comet Tail"] = "Comet Tail"
+L["Sparkle Flicker"] = "Sparkle Flicker"
+L["Confetti Trail"] = "Confetti Trail"
+L["Double Helix"] = "Double Helix"
+L["Bouncy Tail"] = "Bouncy Tail"
 
 -- Pulse Effect Settings
 L["Pulse Effect Settings"] = "Pulse Effect Settings"

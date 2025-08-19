@@ -54,6 +54,21 @@ L["Number of Tails"] = "尾部数量"
 L["Select the number of tails"] = "选择尾部数量"
 L["Tail Spacing"] = "尾部间距"
 L["Adjust the spacing between multiple tails"] = "调整多个尾部之间的间距"
+L["Tail Style"] = "尾部样式"
+L["Select the visual style for the cursor tail"] = "选择鼠标指针尾部的视觉样式"
+
+-- Tail Style Options
+L["Standard"] = "标准"
+L["Rainbow Trail"] = "彩虹轨迹"
+L["Pulse Tail"] = "脉冲尾部"
+L["Twist Spiral"] = "扭转螺旋"
+L["Wave Tail"] = "波浪尾部"
+L["Trailing Shadow"] = "拖尾阴影"
+L["Comet Tail"] = "彗星尾部"
+L["Sparkle Flicker"] = "闪烁"
+L["Confetti Trail"] = "彩屑轨迹"
+L["Double Helix"] = "双螺旋"
+L["Bouncy Tail"] = "弹跳尾部"
 
 -- Pulse Effect Settings
 L["Pulse Effect Settings"] = "脉冲效果设置"
