@@ -925,6 +925,20 @@ function CursorGlow:DisableTailEffect()
 end
 
 -- Helper functions for advanced tail effects
+--[[
+Tail Effect Style Descriptions:
+1. Standard: Basic linear fade trail
+2. Rainbow Trail: Each segment cycles through colors using HSV color space
+3. Pulse Tail: Segments pulse in size using sine wave modulation
+4. Twist Spiral: Segments spiral around the movement path with trigonometric offsets
+5. Wave Tail: Segments follow a sine wave perpendicular to cursor movement
+6. Trailing Shadow: Segments are offset diagonally with dark semi-transparent color
+7. Comet Tail: Segments start bright/large and fade/shrink rapidly like a comet streak
+8. Sparkle Flicker: Segment alpha and size flicker randomly for a twinkling effect
+9. Confetti Trail: Multiple mini-segments spawn at random spots with random colors
+10. Double Helix: Two tails spiral in opposite directions creating DNA-like effect
+11. Bouncy Tail: Segments bounce up/down using periodic function for Y offset
+--]]
 local function HSVtoRGB(h, s, v)
     local r, g, b
     local i = math.floor(h * 6)

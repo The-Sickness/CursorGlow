@@ -54,6 +54,21 @@ L["Number of Tails"] = "Numero di Scie"
 L["Select the number of tails"] = "Seleziona il numero di scie"
 L["Tail Spacing"] = "Spaziatura Scia"
 L["Adjust the spacing between multiple tails"] = "Regola la spaziatura tra più scie"
+L["Tail Style"] = "Stile Scia"
+L["Select the visual style for the cursor tail"] = "Seleziona lo stile visivo per la scia del cursore"
+
+-- Tail Style Options
+L["Standard"] = "Standard"
+L["Rainbow Trail"] = "Scia Arcobaleno"
+L["Pulse Tail"] = "Scia Pulsante"
+L["Twist Spiral"] = "Spirale Attorcigliata"
+L["Wave Tail"] = "Scia Ondulata"
+L["Trailing Shadow"] = "Ombra Trascinata"
+L["Comet Tail"] = "Scia Cometa"
+L["Sparkle Flicker"] = "Scintillio"
+L["Confetti Trail"] = "Scia Coriandoli"
+L["Double Helix"] = "Doppia Elica"
+L["Bouncy Tail"] = "Scia Rimbalzante"
 
 -- Impostazioni Effetto Pulsazione
 L["Pulse Effect Settings"] = "Impostazioni Effetto Pulsazione"

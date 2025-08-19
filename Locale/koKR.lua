@@ -54,6 +54,21 @@ L["Number of Tails"] = "꼬리 개수"
 L["Select the number of tails"] = "꼬리의 개수를 선택"
 L["Tail Spacing"] = "꼬리 간격"
 L["Adjust the spacing between multiple tails"] = "여러 꼬리 간의 간격을 조정"
+L["Tail Style"] = "꼬리 스타일"
+L["Select the visual style for the cursor tail"] = "커서 꼬리의 시각적 스타일을 선택"
+
+-- Tail Style Options
+L["Standard"] = "표준"
+L["Rainbow Trail"] = "무지개 궤적"
+L["Pulse Tail"] = "맥박 꼬리"
+L["Twist Spiral"] = "비틀린 나선"
+L["Wave Tail"] = "파도 꼬리"
+L["Trailing Shadow"] = "끌리는 그림자"
+L["Comet Tail"] = "혜성 꼬리"
+L["Sparkle Flicker"] = "반짝임"
+L["Confetti Trail"] = "색종이 궤적"
+L["Double Helix"] = "이중 나선"
+L["Bouncy Tail"] = "튀는 꼬리"
 
 -- 맥박 효과 설정
 L["Pulse Effect Settings"] = "맥박 효과 설정"
