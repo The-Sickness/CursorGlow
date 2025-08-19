@@ -90,6 +90,13 @@ texture:SetTexture(textureOptions["star4"])
 texture:SetBlendMode("ADD")
 texture:SetSize(32, 32)
 
+-- ZZZ FontString for Idle Indicator
+local zzzFont = frame:CreateFontString(nil, "OVERLAY")
+zzzFont:SetFont("Fonts\\FRIZQT__.TTF", 30, "OUTLINE")
+zzzFont:SetText("ZZZ")
+zzzFont:SetTextColor(1, 0, 0, 1)
+zzzFont:Hide()
+
 -- Tail effect variables
 local tailTextures = {}
 local tailPositions = {}
@@ -189,7 +196,6 @@ local function InitializeTailTextures()
             tailTextures[tailIndex][i] = tailTexture
         end
     end
-    
 end
 
 local function UpdateExplosionTextureSize(size)
@@ -198,7 +204,6 @@ local function UpdateExplosionTextureSize(size)
     end
 end
 
--- Performance Profile for explosion
 local function TriggerExplosion(cursorX, cursorY)   
     local scale = UIParent:GetEffectiveScale()
     local color = CursorGlow.db.profile.explosionColor
@@ -296,13 +301,14 @@ local profileDefaults = {
         pulseSpeed = 1,
         combatOnly = false,
         enabled = true,
+        idleIndicatorEnabled = true, 
+        idleThreshold = 60, 
     }
 }
 local globalDefaults = { global = { profileEnabled = false } }
 local charDefaults = { char = { lastSelectedProfile = nil } }
 
 function CursorGlow:ApplySettings()
-    
     local profile = self.db.profile
     profile.minimap = profile.minimap or { hide = false }
     profile.explosionColor = profile.explosionColor or {1, 1, 1}
@@ -312,6 +318,8 @@ function CursorGlow:ApplySettings()
     profile.pulseMinSize = profile.pulseMinSize or 50
     profile.pulseMaxSize = profile.pulseMaxSize or 100
     profile.pulseSpeed = profile.pulseSpeed or 1
+    profile.idleIndicatorEnabled = profile.idleIndicatorEnabled or true
+    profile.idleThreshold = profile.idleThreshold or 60
     UpdateTexture(profile.texture)
     UpdateTextureColor()
     UpdateAddonVisibility()
@@ -404,6 +412,30 @@ local options = {
                         else
                             icon:Hide("CursorGlow")
                         end
+                    end,
+					},
+					idleIndicatorEnabled = {
+                    type = 'toggle',
+                    name = "Show ZZZ Above Cursor When Idle",
+                    desc = "Show a floating ZZZ indicator above the cursor after being idle.",
+                    order = 4,
+                    get = function() return CursorGlow.db.profile.idleIndicatorEnabled end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.idleIndicatorEnabled = val
+                        if not val then zzzFont:Hide() end
+                    end,
+                },
+                idleThreshold = {
+                    type = 'range',
+                    name = "Idle Time (seconds)",
+                    desc = "How long to wait before showing the ZZZ indicator.",
+                    order = 5,
+                    min = 5,
+                    max = 300,
+                    step = 1,
+                    get = function() return CursorGlow.db.profile.idleThreshold end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.idleThreshold = val
                     end,
                 },
                 spacerGeneral1 = {
@@ -846,7 +878,6 @@ function HandleCombatState()
 end
 
 frame:SetScript("OnEvent", function(self, event, ...)
-    
     if event == "PLAYER_REGEN_DISABLED" or event == "PLAYER_REGEN_ENABLED" then
         UpdateAddonVisibility()
     elseif event == "ZONE_CHANGED_NEW_AREA" or event == "PLAYER_ENTERING_WORLD" then
@@ -868,7 +899,7 @@ function CursorGlow:DisableTailEffect()
     end
 end
 
--- OnUpdate Handler (Profiled)
+-- OnUpdate Handler with Idle ZZZ logic
 local speed, stationaryTime, pulseElapsedTime, prevX, prevY = 0, 0, 0
 frame:SetScript("OnUpdate", function(self, elapsed)
     local profile = CursorGlow.db.profile
@@ -879,11 +910,13 @@ frame:SetScript("OnUpdate", function(self, elapsed)
     prevX = prevX or cursorX
     prevY = prevY or cursorY
 
+    zzzFont:Hide()
+    
     if profile.operationMode == "enabledAlwaysOnCursor" then
         texture:SetHeight(size)
         texture:SetWidth(size)
         texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cursorX / scale, cursorY / scale)
-        texture:Show()        
+        texture:Show()
         return
     end
 
@@ -905,6 +938,7 @@ frame:SetScript("OnUpdate", function(self, elapsed)
         texture:SetWidth(size)
         texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", (cursorX + 0.5 * dX) / scale, (cursorY + 0.5 * dY) / scale)
         texture:Show()
+        zzzFont:Hide()
         if profile.enableTail then
             for tailIndex = 1, numTails do
                 local offset = (tailIndex - (numTails + 1) / 2) * tailSpacing * scale
@@ -951,6 +985,24 @@ frame:SetScript("OnUpdate", function(self, elapsed)
         else
             texture:Hide()
         end
+
+        -- Idle ZZZ Indicator Logic
+        if profile.idleIndicatorEnabled then
+    if stationaryTime > (profile.idleThreshold or 60) then
+        zzzFont:Show()
+        local scale = UIParent:GetEffectiveScale()
+        local wobble = math.sin(GetTime() * 2) * 5
+        local flashAlpha = 0.5 + 0.5 * math.sin(GetTime() * 4)
+        zzzFont:ClearAllPoints()
+        zzzFont:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cursorX / scale, (cursorY / scale) + 30 + wobble)
+        zzzFont:SetAlpha(flashAlpha)
+    else
+        zzzFont:Hide()
+    end
+else
+    zzzFont:Hide()
+end
+
         if profile.enableTail then
             if stationaryTime >= 1 then
                 wipe(tailPositions)
