@@ -1,6 +1,6 @@
 -- CursorGlow
 -- Made by Sharpedge_Gaming
--- v6.3  2025.08 
+-- v6.2  2025.08 "Particle Tail Effects"
 
 local LibStub = LibStub or _G.LibStub
 local AceDB = LibStub:GetLibrary("AceDB-3.0")
@@ -268,21 +268,6 @@ local minimapButton = LDB:NewDataObject("CursorGlow", {
 })
 
 local defaultClassColor = GetDefaultClassColor()
-
-local tailEffectValues = {
-    classic   = "Classic Trail",
-    rainbow   = "Rainbow Trail",
-    pulse     = "Pulse Trail",
-    twist     = "Twist/Spiral Trail",
-    wave      = "Wave Trail",
-    shadow    = "Trailing Shadow",
-    comet     = "Comet Tail",
-    flicker   = "Sparkle Flicker",
-    confetti  = "Confetti Trail",
-    helix     = "Double Helix",
-    bounce    = "Bouncy Tail",
-}
-
 local profileDefaults = {
     profile = {
         operationMode = "enabledAlways",
@@ -742,28 +727,22 @@ local options = {
                     disabled = function() return not CursorGlow.db.profile.enableTail end,
                 },
                 tailEffectStyle = {
-    type = 'select',
-    name = "Tail Effect Style",
-    desc = "Choose the animation style for the cursor tail.",
-    order = 5,
-    values = {
-        classic   = "Classic Trail",
-        rainbow   = "Rainbow Trail",
-        pulse     = "Pulse Trail",
-        twist     = "Twist/Spiral Trail",
-        wave      = "Wave Trail",
-        comet     = "Comet Tail",
-        flicker   = "Sparkle Flicker",
-        confetti  = "Confetti Trail",
-        helix     = "Double Helix",
-        bounce    = "Bouncy Tail",
-    },
-    get = function() return CursorGlow.db.profile.tailEffectStyle or "classic" end,
-    set = function(_, val)
-        CursorGlow.db.profile.tailEffectStyle = val
-    end,
-    disabled = function() return not CursorGlow.db.profile.enableTail end,
-},
+                    type = 'select',
+                    name = "Tail Effect Style",
+                    desc = "Choose the animation style for the cursor tail.",
+                    order = 5,
+                    values = {
+                        classic = "Classic Trail",
+                        sparkle = "Sparkle (fade/shrink/scatter)",
+                        wobble = "Wobble (fade/shrink/wobble)",
+                        burst = "Burst (fast fade/scatter)"
+                    },
+                    get = function() return CursorGlow.db.profile.tailEffectStyle or "classic" end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.tailEffectStyle = val
+                    end,
+                    disabled = function() return not CursorGlow.db.profile.enableTail end,
+                },
                 tailParticleSpeed = {
                     type = 'range',
                     name = "Particle Fade Speed",
@@ -911,23 +890,6 @@ frame:RegisterEvent("PLAYER_REGEN_ENABLED")
 frame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 
-local function HSVtoRGB(h, s, v)
-    local r, g, b
-    local i = math.floor(h * 6)
-    local f = h * 6 - i
-    local p = v * (1 - s)
-    local q = v * (1 - f * s)
-    local t = v * (1 - (1 - f) * s)
-    i = i % 6
-    if i == 0 then r, g, b = v, t, p
-    elseif i == 1 then r, g, b = q, v, p
-    elseif i == 2 then r, g, b = p, v, t
-    elseif i == 3 then r, g, b = p, q, v
-    elseif i == 4 then r, g, b = t, p, v
-    elseif i == 5 then r, g, b = v, p, q end
-    return r, g, b
-end
-
 function HandleCombatState()
     if CursorGlow.db.profile.combatOnly then
         ToggleAddon(CursorGlow.db.profile.enabled)
@@ -958,29 +920,20 @@ end
 
 local speed, stationaryTime, pulseElapsedTime, prevX, prevY = 0, 0, 0
 frame:SetScript("OnUpdate", function(self, elapsed)
-    -- Utility function: Clamp value to [0, 1] and ensure number
-    local function Clamp01(a)
-        a = tonumber(a) or 0
-        if a < 0 then return 0 end
-        if a > 1 then return 1 end
-        return a
-    end
-
     local profile = CursorGlow.db.profile
     local size = math.max(profile.minSize, profile.maxSize)
-    local opacity = Clamp01(profile.opacity)
+    local opacity = profile.opacity or 1
     local scale = UIParent:GetEffectiveScale()
     local cursorX, cursorY = GetCursorPosition()
     prevX = prevX or cursorX
     prevY = prevY or cursorY
 
     zzzFont:Hide()
-
+    
     if profile.operationMode == "enabledAlwaysOnCursor" then
         texture:SetHeight(size)
         texture:SetWidth(size)
         texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cursorX / scale, cursorY / scale)
-        texture:SetAlpha(opacity)
         texture:Show()
         return
     end
@@ -993,51 +946,7 @@ frame:SetScript("OnUpdate", function(self, elapsed)
 
     if elapsed == 0 then elapsed = 0.0001 end
     local decayFactor = 2048 ^ -elapsed
-    speed = math.min(decayFactor * (speed or 0) + (1 - decayFactor) * distance / elapsed, 1024)
-
-    local effectStyle = profile.tailEffectStyle or "classic"
-    local fadeSpeed = tonumber(profile.tailParticleSpeed) or 0.5
-    local scatter = tonumber(profile.tailParticleScatter) or 6
-    local wobbleStrength = tonumber(profile.tailParticleWobble) or 5
-    local tailLength = CursorGlow.tailLength
-    local tnow = GetTime()
-    local color = colorOptions[profile.color] or {1,1,1}
-
-    -- HSV to RGB helper function
-    local function HSVtoRGB(h, s, v)
-        local r, g, b
-        local i = math.floor(h * 6)
-        local f = h * 6 - i
-        local p = v * (1 - s)
-        local q = v * (1 - f * s)
-        local t = v * (1 - (1 - f) * s)
-        i = i % 6
-        if i == 0 then r, g, b = v, t, p
-        elseif i == 1 then r, g, b = q, v, p
-        elseif i == 2 then r, g, b = p, v, t
-        elseif i == 3 then r, g, b = p, q, v
-        elseif i == 4 then r, g, b = t, p, v
-        elseif i == 5 then r, g, b = v, p, q end
-        return r, g, b
-    end
-
-    -- Handle disabling tail effect early
-    if not profile.enableTail then
-        for _, tailGroup in pairs(tailTextures) do
-            for _, tailTexture in ipairs(tailGroup or {}) do
-                tailTexture:Hide()
-            end
-        end
-        wipe(tailPositions)
-        if frame._confetti then
-            for i, tailTexture in ipairs(tailTextures[1] or {}) do
-                tailTexture:Hide()
-            end
-            frame._confetti = {}
-        end
-        prevX, prevY = cursorX, cursorY   
-        return
-    end
+    speed = math.min(decayFactor * speed + (1 - decayFactor) * distance / elapsed, 1024)
 
     if distance > 0 then
         stationaryTime = 0
@@ -1046,179 +955,137 @@ frame:SetScript("OnUpdate", function(self, elapsed)
         texture:SetHeight(size)
         texture:SetWidth(size)
         texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", (cursorX + 0.5 * dX) / scale, (cursorY + 0.5 * dY) / scale)
-        texture:SetAlpha(opacity)
         texture:Show()
         zzzFont:Hide()
+        if profile.enableTail then
+            local effectStyle = profile.tailEffectStyle or "classic"
+            local fadeSpeed = profile.tailParticleSpeed or 0.5
+            local scatter = profile.tailParticleScatter or 6
+            local wobbleStrength = profile.tailParticleWobble or 5
 
-        -- Confetti Effect (new logic!)
-        if effectStyle == "confetti" then
-            -- Setup confetti storage if missing
-            if not frame._confetti then frame._confetti = {} end
-            local confetti = frame._confetti
-
-            -- Burst more particles on movement!
-            for i = 1, 12 do
-                local angle = math.random() * 2 * math.pi
-                local dist = math.random(12, 48)
-                -- Strong colors: one channel is always full
-                local colorChannels = {math.random(), math.random(), math.random()}
-                local maxChannel = math.random(1, 3)
-                colorChannels[maxChannel] = 1
-                table.insert(confetti, {
-                    x = (cursorX / scale) + math.cos(angle) * dist,
-                    y = (cursorY / scale) + math.sin(angle) * dist,
-                    t = tnow,
-                    color = colorChannels,
-                    size = math.random(10, size),
-                    alpha = 1,
-                    ttl = math.random(0.18, 0.38)
-                })
-            end
-
-            -- Draw and fade confetti
-            for i = #confetti, 1, -1 do
-                local p = confetti[i]
-                local age = tnow - p.t
-                local alpha = Clamp01(math.max(1 - age / p.ttl, 0) * opacity)
-                if tailTextures[1][i] then
-                    tailTextures[1][i]:SetPoint("CENTER", UIParent, "BOTTOMLEFT", p.x, p.y)
-                    tailTextures[1][i]:SetSize(p.size, p.size)
-                    tailTextures[1][i]:SetAlpha(alpha)
-                    tailTextures[1][i]:SetVertexColor(
-                        Clamp01(p.color[1]),
-                        Clamp01(p.color[2]),
-                        Clamp01(p.color[3]),
-                        alpha
-                    )
-                    if alpha > 0 then
-                        tailTextures[1][i]:Show()
-                    else
-                        tailTextures[1][i]:Hide()
+            if effectStyle == "classic" then
+                for tailIndex = 1, numTails do
+                    local offset = (tailIndex - (numTails + 1) / 2) * tailSpacing * scale
+                    local cursorPos = { x = (cursorX + offset) / scale, y = cursorY / scale }
+                    tailPositions[tailIndex] = tailPositions[tailIndex] or {}
+                    table.insert(tailPositions[tailIndex], 1, cursorPos)
+                    if #tailPositions[tailIndex] > CursorGlow.tailLength then table.remove(tailPositions[tailIndex]) end
+                    tailTextures[tailIndex] = tailTextures[tailIndex] or {}
+                    for i, tailTexture in ipairs(tailTextures[tailIndex]) do
+                        local pos = tailPositions[tailIndex][i]
+                        if pos and tailTexture then
+                            local alpha = (CursorGlow.tailLength - i + 1) / CursorGlow.tailLength
+                            tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)
+                            tailTexture:SetAlpha(alpha * opacity)
+                            tailTexture:SetSize(size, size)
+                            tailTexture:Show()
+                        elseif tailTexture then
+                            tailTexture:Hide()
+                        end
                     end
                 end
-                if alpha <= 0 then
-                    table.remove(confetti, i)
-                end
-            end
-            prevX, prevY = cursorX, cursorY
-            return
-        end
-		
-        for tailIndex = 1, numTails do
-            local offset = (tailIndex - (numTails + 1) / 2) * tailSpacing * scale
-            local basePos = { x = (cursorX + offset) / scale, y = cursorY / scale }
-            tailPositions[tailIndex] = tailPositions[tailIndex] or {}
-            tailTextures[tailIndex] = tailTextures[tailIndex] or {}
 
-            if effectStyle == "classic" or effectStyle == "shadow" or effectStyle == "comet"
-              or effectStyle == "pulse" or effectStyle == "twist"
-              or effectStyle == "wave" or effectStyle == "bounce"
-              or effectStyle == "rainbow" or effectStyle == "flicker" then
-                table.insert(tailPositions[tailIndex], 1, {x=basePos.x, y=basePos.y, t=tnow})
-                if #tailPositions[tailIndex] > tailLength then table.remove(tailPositions[tailIndex]) end
-            elseif effectStyle == "helix" then
-                table.insert(tailPositions[tailIndex], 1, {x=basePos.x, y=basePos.y, t=tnow, helix=tailIndex})
-                if #tailPositions[tailIndex] > tailLength then table.remove(tailPositions[tailIndex]) end
-            end
-
-            for i = 1, tailLength do
-                local pos = tailPositions[tailIndex][i]
-                local tailTexture = tailTextures[tailIndex][i]
-                if not pos or not tailTexture then
-                    if tailTexture then tailTexture:Hide() end
-                else
-                    local progress = (tailLength - i + 1) / tailLength
-                    local age = tnow - (pos.t or tnow)
-                    local fade = Clamp01(math.max(1 - (age / fadeSpeed), 0))
-                    local sparkleSize = size * fade
-                    local display = fade > 0
-                    local x, y = pos.x, pos.y
-                    local r, g, b = color[1], color[2], color[3]
-                    local alpha = Clamp01(fade * opacity)
-
-                    if effectStyle == "classic" then
-                        tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", x, y)
-                        tailTexture:SetAlpha(alpha)
-                        tailTexture:SetSize(size, size)
-                        tailTexture:SetVertexColor(Clamp01(r), Clamp01(g), Clamp01(b), alpha)
-
-                    elseif effectStyle == "rainbow" then
-                        local h = ((i/tailLength) + (tnow*0.5)) % 1
-                        r, g, b = HSVtoRGB(h, 1, 1)
-                        tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", x, y)
-                        tailTexture:SetAlpha(alpha)
-                        tailTexture:SetSize(size, size)
-                        tailTexture:SetVertexColor(Clamp01(r), Clamp01(g), Clamp01(b), alpha)
-
-                    elseif effectStyle == "pulse" then
-                        local pulse = 0.8 + 0.2 * math.sin(tnow*7 + i)
-                        tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", x, y)
-                        tailTexture:SetAlpha(alpha)
-                        tailTexture:SetSize(size * pulse, size * pulse)
-                        tailTexture:SetVertexColor(Clamp01(r), Clamp01(g), Clamp01(b), alpha)
-
-                    elseif effectStyle == "twist" then
-                        local angle = (i / tailLength) * 2 * math.pi + tnow*2
-                        local spiralRadius = 10 + 8 * fade
-                        tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT",
-                            x + spiralRadius*math.cos(angle),
-                            y + spiralRadius*math.sin(angle))
-                        tailTexture:SetAlpha(alpha)
-                        tailTexture:SetSize(size, size)
-                        tailTexture:SetVertexColor(Clamp01(r), Clamp01(g), Clamp01(b), alpha)
-
-                    elseif effectStyle == "wave" then
-                        local wave = math.sin(tnow*5 + i) * 12 * fade
-                        tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", x, y + wave)
-                        tailTexture:SetAlpha(alpha)
-                        tailTexture:SetSize(size, size)
-                        tailTexture:SetVertexColor(Clamp01(r), Clamp01(g), Clamp01(b), alpha)
-
-                    elseif effectStyle == "comet" then
-                        local cometFade = Clamp01(fade^3)
-                        local cometSize = size * cometFade
-                        tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", x, y)
-                        tailTexture:SetAlpha(cometFade)
-                        tailTexture:SetSize(cometSize, cometSize)
-                        tailTexture:SetVertexColor(Clamp01(r), Clamp01(g), Clamp01(b), cometFade)
-
-                    elseif effectStyle == "flicker" then
-                        local flicker = 0.85 + math.random()*0.3
-                        local flickerAlpha = Clamp01(alpha * flicker)
-                        tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", x, y)
-                        tailTexture:SetAlpha(flickerAlpha)
-                        tailTexture:SetSize(size * flicker, size * flicker)
-                        tailTexture:SetVertexColor(Clamp01(r), Clamp01(g), Clamp01(b), flickerAlpha)
-
-                    elseif effectStyle == "bounce" then
-                        local bounce = math.abs(math.sin(tnow*6 + i)) * 28 * fade
-                        tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", x, y + bounce)
-                        tailTexture:SetAlpha(alpha)
-                        tailTexture:SetSize(size, size)
-                        tailTexture:SetVertexColor(Clamp01(r), Clamp01(g), Clamp01(b), alpha)
-
-                    elseif effectStyle == "helix" then
-                        local helixDir = (tailIndex == 1) and 1 or -1
-                        local helixAngle = helixDir * (i/tailLength)*3*math.pi + tnow*3
-                        local helixRadius = 16 + 12 * fade
-                        tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT",
-                            x + helixRadius*math.cos(helixAngle),
-                            y + helixRadius*math.sin(helixAngle))
-                        tailTexture:SetAlpha(alpha)
-                        tailTexture:SetSize(size, size)      
-                        tailTexture:SetVertexColor(Clamp01(r), Clamp01(g), Clamp01(b), alpha)
+            elseif effectStyle == "sparkle" then
+                for tailIndex = 1, numTails do
+                    local offset = (tailIndex - (numTails + 1) / 2) * tailSpacing * scale
+                    local cursorPos = { x = (cursorX + offset) / scale, y = cursorY / scale }
+                    tailPositions[tailIndex] = tailPositions[tailIndex] or {}
+                    table.insert(tailPositions[tailIndex], 1, {
+                        x = cursorPos.x + math.random(-scatter, scatter),
+                        y = cursorPos.y + math.random(-scatter, scatter),
+                        t = GetTime()
+                    })
+                    if #tailPositions[tailIndex] > CursorGlow.tailLength then table.remove(tailPositions[tailIndex]) end
+                    tailTextures[tailIndex] = tailTextures[tailIndex] or {}
+                    for i, tailTexture in ipairs(tailTextures[tailIndex]) do
+                        local pos = tailPositions[tailIndex][i]
+                        if pos and tailTexture then
+                            local age = GetTime() - (pos.t or 0)
+                            local fade = math.max(1 - (age / fadeSpeed), 0)
+                            local sparkleSize = size * fade
+                            tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)
+                            tailTexture:SetAlpha(fade * opacity)
+                            tailTexture:SetSize(sparkleSize, sparkleSize)
+                            if fade > 0 then tailTexture:Show() else tailTexture:Hide() end
+                        elseif tailTexture then
+                            tailTexture:Hide()
+                        end
                     end
-
-                    if display then tailTexture:Show() else tailTexture:Hide() end
                 end
+
+            elseif effectStyle == "wobble" then
+                for tailIndex = 1, numTails do
+                    local offset = (tailIndex - (numTails + 1) / 2) * tailSpacing * scale
+                    local cursorPos = { x = (cursorX + offset) / scale, y = cursorY / scale }
+                    tailPositions[tailIndex] = tailPositions[tailIndex] or {}
+                    table.insert(tailPositions[tailIndex], 1, {
+                        x = cursorPos.x + math.random(-scatter, scatter),
+                        y = cursorPos.y + math.random(-scatter, scatter),
+                        t = GetTime(),
+                        phase = math.random() * 2 * math.pi
+                    })
+                    if #tailPositions[tailIndex] > CursorGlow.tailLength then table.remove(tailPositions[tailIndex]) end
+                    tailTextures[tailIndex] = tailTextures[tailIndex] or {}
+                    for i, tailTexture in ipairs(tailTextures[tailIndex]) do
+                        local pos = tailPositions[tailIndex][i]
+                        if pos and tailTexture then
+                            local age = GetTime() - (pos.t or 0)
+                            local fade = math.max(1 - (age / fadeSpeed), 0)
+                            local sparkleSize = size * fade
+                            local wobble = math.sin(GetTime()*8 + (pos.phase or 0)) * wobbleStrength * fade
+                            tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x + wobble, pos.y + wobble)
+                            tailTexture:SetAlpha(fade * opacity)
+                            tailTexture:SetSize(sparkleSize, sparkleSize)
+                            if fade > 0 then tailTexture:Show() else tailTexture:Hide() end
+                        elseif tailTexture then
+                            tailTexture:Hide()
+                        end
+                    end
+                end
+
+            elseif effectStyle == "burst" then
+                local burstScatter = scatter * 2
+                local burstSpeed = fadeSpeed * 0.6 -- faster fade
+                for tailIndex = 1, numTails do
+                    local offset = (tailIndex - (numTails + 1) / 2) * tailSpacing * scale
+                    local cursorPos = { x = (cursorX + offset) / scale, y = cursorY / scale }
+                    tailPositions[tailIndex] = tailPositions[tailIndex] or {}
+                    table.insert(tailPositions[tailIndex], 1, {
+                        x = cursorPos.x + math.random(-burstScatter, burstScatter),
+                        y = cursorPos.y + math.random(-burstScatter, burstScatter),
+                        t = GetTime()
+                    })
+                    if #tailPositions[tailIndex] > CursorGlow.tailLength then table.remove(tailPositions[tailIndex]) end
+                    tailTextures[tailIndex] = tailTextures[tailIndex] or {}
+                    for i, tailTexture in ipairs(tailTextures[tailIndex]) do
+                        local pos = tailPositions[tailIndex][i]
+                        if pos and tailTexture then
+                            local age = GetTime() - (pos.t or 0)
+                            local fade = math.max(1 - (age / burstSpeed), 0)
+                            local sparkleSize = size * fade
+                            tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)
+                            tailTexture:SetAlpha(fade * opacity)
+                            tailTexture:SetSize(sparkleSize, sparkleSize)
+                            if fade > 0 then tailTexture:Show() else tailTexture:Hide() end
+                        elseif tailTexture then
+                            tailTexture:Hide()
+                        end
+                    end
+                end
+
             end
+        else
+            for _, tailGroup in pairs(tailTextures) do
+                for _, tailTexture in ipairs(tailGroup or {}) do tailTexture:Hide() end
+            end
+            wipe(tailPositions)
         end
     else
         stationaryTime = stationaryTime + elapsed
         if profile.pulseEnabled then
             if stationaryTime >= 0.5 then
                 pulseElapsedTime = pulseElapsedTime + elapsed
-                local pulseSpeed = tonumber(profile.pulseSpeed) or 1
+                local pulseSpeed = profile.pulseSpeed or 1
                 local pulseProgress = (math.sin(pulseElapsedTime * pulseSpeed * math.pi * 2) + 1) / 2
                 local pulseSize = profile.pulseMinSize + (profile.pulseMaxSize - profile.pulseMinSize) * pulseProgress
                 texture:SetHeight(pulseSize)
@@ -1238,7 +1105,7 @@ frame:SetScript("OnUpdate", function(self, elapsed)
                 zzzFont:Show()
                 local scale = UIParent:GetEffectiveScale()
                 local wobble = math.sin(GetTime() * 2) * 5
-                local flashAlpha = Clamp01(0.5 + 0.5 * math.sin(GetTime() * 4))
+                local flashAlpha = 0.5 + 0.5 * math.sin(GetTime() * 4)
                 zzzFont:ClearAllPoints()
                 zzzFont:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cursorX / scale, (cursorY / scale) + 30 + wobble)
                 zzzFont:SetAlpha(flashAlpha)
@@ -1253,25 +1120,56 @@ frame:SetScript("OnUpdate", function(self, elapsed)
             if stationaryTime >= 1 then
                 wipe(tailPositions)
             else
-                for tailIndex = 1, numTails do
-                    for i, tailTexture in ipairs(tailTextures[tailIndex] or {}) do
-                        local pos = tailPositions[tailIndex] and tailPositions[tailIndex][i]
-                        local alpha = 0
-                        if pos and tailTexture then
-                            alpha = Clamp01(((CursorGlow.tailLength - i + 1) / CursorGlow.tailLength) * math.max(1 - stationaryTime, 0) * opacity)
-                            tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)
-                            tailTexture:SetAlpha(alpha)
-                            tailTexture:SetSize(size * alpha, size * alpha)
-                            tailTexture:SetVertexColor(Clamp01(r), Clamp01(g), Clamp01(b), alpha)
-                            if alpha > 0 then tailTexture:Show() else tailTexture:Hide() end
-                        elseif tailTexture then
-                            tailTexture:Hide()
+                local effectStyle = profile.tailEffectStyle or "classic"
+                local fadeSpeed = profile.tailParticleSpeed or 0.5
+                local scatter = profile.tailParticleScatter or 6
+                local wobbleStrength = profile.tailParticleWobble or 5
+                if effectStyle == "classic" then
+                    for tailIndex = 1, numTails do
+                        for i, tailTexture in ipairs(tailTextures[tailIndex] or {}) do
+                            local pos = tailPositions[tailIndex] and tailPositions[tailIndex][i]
+                            if pos and tailTexture then
+                                local alpha = ((CursorGlow.tailLength - i + 1) / CursorGlow.tailLength) * math.max(1 - stationaryTime, 0)
+                                tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)
+                                tailTexture:SetAlpha(alpha * opacity)
+                                tailTexture:SetSize(size * alpha, size * alpha)
+                                if alpha > 0 then tailTexture:Show() else tailTexture:Hide() end
+                            elseif tailTexture then
+                                tailTexture:Hide()
+                            end
+                        end
+                    end
+                else
+                    for tailIndex = 1, numTails do
+                        for i, tailTexture in ipairs(tailTextures[tailIndex] or {}) do
+                            local pos = tailPositions[tailIndex] and tailPositions[tailIndex][i]
+                            if pos and tailTexture then
+                                local age = GetTime() - (pos.t or 0)
+                                local fade = math.max(1 - (age / fadeSpeed), 0) * math.max(1 - stationaryTime, 0)
+                                local sparkleSize = size * fade
+                                local display = fade > 0
+                                if effectStyle == "wobble" then
+                                    local wobble = math.sin(GetTime()*8 + (pos.phase or 0)) * wobbleStrength * fade
+                                    tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x + wobble, pos.y + wobble)
+                                else
+                                    tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)
+                                end
+                                tailTexture:SetAlpha(fade * opacity)
+                                tailTexture:SetSize(sparkleSize, sparkleSize)
+                                if display then tailTexture:Show() else tailTexture:Hide() end
+                            elseif tailTexture then
+                                tailTexture:Hide()
+                            end
                         end
                     end
                 end
             end
+        else
+            for _, tailGroup in pairs(tailTextures) do
+                for _, tailTexture in ipairs(tailGroup or {}) do tailTexture:Hide() end
+            end
+            wipe(tailPositions)
         end
     end
-
     prevX, prevY = cursorX, cursorY   
 end)
