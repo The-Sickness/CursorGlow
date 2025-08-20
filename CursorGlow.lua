@@ -1,6 +1,6 @@
 -- CursorGlow
 -- Made by Sharpedge_Gaming
--- v6.1  2025.08 
+-- v6.3  2025.08 
 
 local LibStub = LibStub or _G.LibStub
 local AceDB = LibStub:GetLibrary("AceDB-3.0")
@@ -16,11 +16,9 @@ local L = LibStub("AceLocale-3.0"):GetLocale("CursorGlow", true)
 
 local CursorGlow = AceAddon:NewAddon("CursorGlow", "AceEvent-3.0", "AceConsole-3.0")
 
--- Constants
 local NUM_PARTICLES = 100
 local EXPLOSION_SPEED = 30
 
--- Texture and Color Options
 local textureOptions = {
     ["ring1"] = "Interface\\Addons\\CursorGlow\\Textures\\Test2.png",
     ["ring2"] = "Interface\\Addons\\CursorGlow\\Textures\\Test3.png",
@@ -82,7 +80,6 @@ local colorOptions = {
     warlock = {0.58, 0.51, 0.79}, monk = {0.00, 1.00, 0.59}, druid = {1.00, 0.49, 0.04}, demonhunter = {0.64, 0.19, 0.79}, evoker = {0.20, 0.58, 0.50}
 }
 
--- Main frame and texture
 local frame = CreateFrame("Frame", nil, UIParent)
 frame:SetFrameStrata("TOOLTIP")
 local texture = frame:CreateTexture()
@@ -90,19 +87,16 @@ texture:SetTexture(textureOptions["star4"])
 texture:SetBlendMode("ADD")
 texture:SetSize(32, 32)
 
--- ZZZ FontString for Idle Indicator
 local zzzFont = frame:CreateFontString(nil, "OVERLAY")
 zzzFont:SetFont("Fonts\\FRIZQT__.TTF", 30, "OUTLINE")
 zzzFont:SetText("ZZZ")
 zzzFont:SetTextColor(1, 0, 0, 1)
 zzzFont:Hide()
 
--- Tail effect variables
 local tailTextures = {}
 local tailPositions = {}
 CursorGlow.tailLength = 60
 
--- Explosion particle pool
 local particles = {}
 local function CreateExplosionParticles(textureKey, size)
     for i = 1, NUM_PARTICLES do
@@ -241,7 +235,6 @@ local function TriggerExplosionOnClick()
     TriggerExplosion(cursorX, cursorY)
 end
 
--- Mouse event frame
 local eventHandlerFrame = CreateFrame("Frame", nil, UIParent)
 eventHandlerFrame:RegisterEvent("GLOBAL_MOUSE_DOWN")
 eventHandlerFrame:SetScript("OnEvent", function(self, event, buttonName)
@@ -250,7 +243,6 @@ eventHandlerFrame:SetScript("OnEvent", function(self, event, buttonName)
     end
 end)
 
--- Minimap Button
 local minimapButton = LDB:NewDataObject("CursorGlow", {
     type = "data source",
     text = "CursorGlow",
@@ -275,8 +267,22 @@ local minimapButton = LDB:NewDataObject("CursorGlow", {
     end,
 })
 
--- Profile Defaults
 local defaultClassColor = GetDefaultClassColor()
+
+local tailEffectValues = {
+    classic   = "Classic Trail",
+    rainbow   = "Rainbow Trail",
+    pulse     = "Pulse Trail",
+    twist     = "Twist/Spiral Trail",
+    wave      = "Wave Trail",
+    shadow    = "Trailing Shadow",
+    comet     = "Comet Tail",
+    flicker   = "Sparkle Flicker",
+    confetti  = "Confetti Trail",
+    helix     = "Double Helix",
+    bounce    = "Bouncy Tail",
+}
+
 local profileDefaults = {
     profile = {
         operationMode = "enabledAlways",
@@ -303,6 +309,11 @@ local profileDefaults = {
         enabled = true,
         idleIndicatorEnabled = true, 
         idleThreshold = 60, 
+        -- New particle tail options
+        tailEffectStyle = "classic",
+        tailParticleSpeed = 0.5,
+        tailParticleScatter = 6,
+        tailParticleWobble = 5,
     }
 }
 local globalDefaults = { global = { profileEnabled = false } }
@@ -320,6 +331,10 @@ function CursorGlow:ApplySettings()
     profile.pulseSpeed = profile.pulseSpeed or 1
     profile.idleIndicatorEnabled = profile.idleIndicatorEnabled or true
     profile.idleThreshold = profile.idleThreshold or 60
+    profile.tailEffectStyle = profile.tailEffectStyle or "classic"
+    profile.tailParticleSpeed = profile.tailParticleSpeed or 0.5
+    profile.tailParticleScatter = profile.tailParticleScatter or 6
+    profile.tailParticleWobble = profile.tailParticleWobble or 5
     UpdateTexture(profile.texture)
     UpdateTextureColor()
     UpdateAddonVisibility()
@@ -349,12 +364,10 @@ function CursorGlow:OnProfileChanged(event, db, newProfile)
     self:ApplySettings()
 end
 
--- Create and register the main options
 local options = {
     name = "CursorGlow",
     type = 'group',
     args = {
-        -- General Settings Header
         generalHeader = {
             type = 'header',
             name = L["General Settings"],
@@ -413,8 +426,8 @@ local options = {
                             icon:Hide("CursorGlow")
                         end
                     end,
-					},
-					idleIndicatorEnabled = {
+                },
+                idleIndicatorEnabled = {
                     type = 'toggle',
                     name = "Show ZZZ Above Cursor When Idle",
                     desc = "Show a floating ZZZ indicator above the cursor after being idle.",
@@ -441,12 +454,11 @@ local options = {
                 spacerGeneral1 = {
                     type = 'description',
                     name = " ",  
-                    order = 4,
+                    order = 6,
                 },
             },
         },
 
-        -- Explosion Settings Header
         explosionHeader = {
             type = 'header',
             name = L["Explosion Settings"],
@@ -521,54 +533,21 @@ local options = {
                     name = L["Explosion Texture"],
                     desc = L["Select the texture for the explosion effect"],
                     order = 6,
-                    values = {
-                        ring1 = "Ring 1",
-                        ring2 = "Ring 2",
-                        ring3 = "Ring 3",
-                        ring4 = "Ring 4",
-                        ring5 = "Ring 5",
-                        ring6 = "Ring 6",
-                        ring7 = "Ring 7",
-                        ring8 = "Ring 8",
-                        ring9 = "Ring 9",
-                        ring10 = "Star 1",
-                        ring11 = "Star 2",
-                        ring12 = "Star 3",
-                        ring13 = "Star 4",
-                        ring14 = "Star 5",
-                        ring15 = "Starburst",
-                        ring16 = "Butterfly",
-                        ring17 = "Butterfly 2",
-                        ring18 = "Butterfly 3",
-                        ring19 = "Swirl",
-                        ring20 = "Swirl 2",
-                        ring21 = "Horde",
-                        ring22 = "Alliance",
-                        ring23 = "Burst",
-						ring24 = "Fireball",
-						ring25 = "SpiderWeb",
-						ring26 = "ShatteredGlass",
-						ring27 = "Bubbles",
-						ring28 = "Eyeball",
-						ring29 = "Skull",
-						ring30 = "Snowflake",
-						ring31 = "Paw",
-                    },
+                    values = values,
                     get = function() return CursorGlow.db.profile.explosionTexture end,
                     set = function(_, val)
-                     CursorGlow.db.profile.explosionTexture = val
-                     CreateExplosionParticles(val, CursorGlow.db.profile.explosionTextureSize or 10)
-                    local color = CursorGlow.db.profile.explosionColor or {1, 1, 1}
+                        CursorGlow.db.profile.explosionTexture = val
+                        CreateExplosionParticles(val, CursorGlow.db.profile.explosionTextureSize or 10)
+                        local color = CursorGlow.db.profile.explosionColor or {1, 1, 1}
                         for _, particle in ipairs(particles) do
                             particle.texture:SetVertexColor(unpack(color))
-                            end
-                         end,
+                        end
+                    end,
                     disabled = function() return not CursorGlow.db.profile.enableExplosion end,
                 },
             },
         },
 
-        -- Appearance Settings Header
         appearanceHeader = {
             type = 'header',
             name = L["Appearance Settings"],
@@ -615,7 +594,6 @@ local options = {
                         lime = L["Lime"],
                         olive = L["Olive"],
                         navy = L["Navy"],
-                        -- WoW Class Colors
                         warrior = L["Warrior"],
                         paladin = L["Paladin"],
                         hunter = L["Hunter"],
@@ -685,7 +663,6 @@ local options = {
             },
         },
 
-        -- Tail Effect Settings Header
         tailHeader = {
             type = 'header',
             name = L["Tail Effect Settings"],
@@ -764,10 +741,74 @@ local options = {
                     end,
                     disabled = function() return not CursorGlow.db.profile.enableTail end,
                 },
+                tailEffectStyle = {
+    type = 'select',
+    name = "Tail Effect Style",
+    desc = "Choose the animation style for the cursor tail.",
+    order = 5,
+    values = {
+        classic   = "Classic Trail",
+        rainbow   = "Rainbow Trail",
+        pulse     = "Pulse Trail",
+        twist     = "Twist/Spiral Trail",
+        wave      = "Wave Trail",
+        comet     = "Comet Tail",
+        flicker   = "Sparkle Flicker",
+        confetti  = "Confetti Trail",
+        helix     = "Double Helix",
+        bounce    = "Bouncy Tail",
+    },
+    get = function() return CursorGlow.db.profile.tailEffectStyle or "classic" end,
+    set = function(_, val)
+        CursorGlow.db.profile.tailEffectStyle = val
+    end,
+    disabled = function() return not CursorGlow.db.profile.enableTail end,
+},
+                tailParticleSpeed = {
+                    type = 'range',
+                    name = "Particle Fade Speed",
+                    desc = "How quickly particles fade out (in seconds)",
+                    order = 6,
+                    min = 0.2,
+                    max = 2,
+                    step = 0.1,
+                    get = function() return CursorGlow.db.profile.tailParticleSpeed or 0.5 end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.tailParticleSpeed = val
+                    end,
+                    disabled = function() return not CursorGlow.db.profile.enableTail end,
+                },
+                tailParticleScatter = {
+                    type = 'range',
+                    name = "Particle Scatter",
+                    desc = "How much particles are randomly offset (in pixels)",
+                    order = 7,
+                    min = 0,
+                    max = 16,
+                    step = 1,
+                    get = function() return CursorGlow.db.profile.tailParticleScatter or 6 end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.tailParticleScatter = val
+                    end,
+                    disabled = function() return not CursorGlow.db.profile.enableTail end,
+                },
+                tailParticleWobble = {
+                    type = 'range',
+                    name = "Particle Wobble",
+                    desc = "Wobble strength for the particle tail (in pixels)",
+                    order = 8,
+                    min = 0,
+                    max = 20,
+                    step = 1,
+                    get = function() return CursorGlow.db.profile.tailParticleWobble or 5 end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.tailParticleWobble = val
+                    end,
+                    disabled = function() return not CursorGlow.db.profile.enableTail end,
+                },
             },
         },
 
-        -- Pulse Effect Settings Header
         pulseHeader = {
             type = 'header',
             name = L["Pulse Effect Settings"],
@@ -836,7 +877,6 @@ local options = {
     },
 }
 
--- Initialization
 function CursorGlow:OnInitialize()   
     self.db = AceDB:New("CursorGlowDB", profileDefaults)
     self.dbChar = AceDB:New("CursorGlowCharDB", charDefaults)
@@ -871,6 +911,23 @@ frame:RegisterEvent("PLAYER_REGEN_ENABLED")
 frame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 
+local function HSVtoRGB(h, s, v)
+    local r, g, b
+    local i = math.floor(h * 6)
+    local f = h * 6 - i
+    local p = v * (1 - s)
+    local q = v * (1 - f * s)
+    local t = v * (1 - (1 - f) * s)
+    i = i % 6
+    if i == 0 then r, g, b = v, t, p
+    elseif i == 1 then r, g, b = q, v, p
+    elseif i == 2 then r, g, b = p, v, t
+    elseif i == 3 then r, g, b = p, q, v
+    elseif i == 4 then r, g, b = t, p, v
+    elseif i == 5 then r, g, b = v, p, q end
+    return r, g, b
+end
+
 function HandleCombatState()
     if CursorGlow.db.profile.combatOnly then
         ToggleAddon(CursorGlow.db.profile.enabled)
@@ -899,23 +956,31 @@ function CursorGlow:DisableTailEffect()
     end
 end
 
--- OnUpdate Handler with Idle ZZZ logic
 local speed, stationaryTime, pulseElapsedTime, prevX, prevY = 0, 0, 0
 frame:SetScript("OnUpdate", function(self, elapsed)
+    -- Utility function: Clamp value to [0, 1] and ensure number
+    local function Clamp01(a)
+        a = tonumber(a) or 0
+        if a < 0 then return 0 end
+        if a > 1 then return 1 end
+        return a
+    end
+
     local profile = CursorGlow.db.profile
     local size = math.max(profile.minSize, profile.maxSize)
-    local opacity = profile.opacity or 1
+    local opacity = Clamp01(profile.opacity)
     local scale = UIParent:GetEffectiveScale()
     local cursorX, cursorY = GetCursorPosition()
     prevX = prevX or cursorX
     prevY = prevY or cursorY
 
     zzzFont:Hide()
-    
+
     if profile.operationMode == "enabledAlwaysOnCursor" then
         texture:SetHeight(size)
         texture:SetWidth(size)
         texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cursorX / scale, cursorY / scale)
+        texture:SetAlpha(opacity)
         texture:Show()
         return
     end
@@ -928,7 +993,51 @@ frame:SetScript("OnUpdate", function(self, elapsed)
 
     if elapsed == 0 then elapsed = 0.0001 end
     local decayFactor = 2048 ^ -elapsed
-    speed = math.min(decayFactor * speed + (1 - decayFactor) * distance / elapsed, 1024)
+    speed = math.min(decayFactor * (speed or 0) + (1 - decayFactor) * distance / elapsed, 1024)
+
+    local effectStyle = profile.tailEffectStyle or "classic"
+    local fadeSpeed = tonumber(profile.tailParticleSpeed) or 0.5
+    local scatter = tonumber(profile.tailParticleScatter) or 6
+    local wobbleStrength = tonumber(profile.tailParticleWobble) or 5
+    local tailLength = CursorGlow.tailLength
+    local tnow = GetTime()
+    local color = colorOptions[profile.color] or {1,1,1}
+
+    -- HSV to RGB helper function
+    local function HSVtoRGB(h, s, v)
+        local r, g, b
+        local i = math.floor(h * 6)
+        local f = h * 6 - i
+        local p = v * (1 - s)
+        local q = v * (1 - f * s)
+        local t = v * (1 - (1 - f) * s)
+        i = i % 6
+        if i == 0 then r, g, b = v, t, p
+        elseif i == 1 then r, g, b = q, v, p
+        elseif i == 2 then r, g, b = p, v, t
+        elseif i == 3 then r, g, b = p, q, v
+        elseif i == 4 then r, g, b = t, p, v
+        elseif i == 5 then r, g, b = v, p, q end
+        return r, g, b
+    end
+
+    -- Handle disabling tail effect early
+    if not profile.enableTail then
+        for _, tailGroup in pairs(tailTextures) do
+            for _, tailTexture in ipairs(tailGroup or {}) do
+                tailTexture:Hide()
+            end
+        end
+        wipe(tailPositions)
+        if frame._confetti then
+            for i, tailTexture in ipairs(tailTextures[1] or {}) do
+                tailTexture:Hide()
+            end
+            frame._confetti = {}
+        end
+        prevX, prevY = cursorX, cursorY   
+        return
+    end
 
     if distance > 0 then
         stationaryTime = 0
@@ -937,41 +1046,179 @@ frame:SetScript("OnUpdate", function(self, elapsed)
         texture:SetHeight(size)
         texture:SetWidth(size)
         texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", (cursorX + 0.5 * dX) / scale, (cursorY + 0.5 * dY) / scale)
+        texture:SetAlpha(opacity)
         texture:Show()
         zzzFont:Hide()
-        if profile.enableTail then
-            for tailIndex = 1, numTails do
-                local offset = (tailIndex - (numTails + 1) / 2) * tailSpacing * scale
-                local cursorPos = { x = (cursorX + offset) / scale, y = cursorY / scale }
-                tailPositions[tailIndex] = tailPositions[tailIndex] or {}
-                table.insert(tailPositions[tailIndex], 1, cursorPos)
-                if #tailPositions[tailIndex] > CursorGlow.tailLength then table.remove(tailPositions[tailIndex]) end
-                tailTextures[tailIndex] = tailTextures[tailIndex] or {}
-                for i, tailTexture in ipairs(tailTextures[tailIndex]) do
-                    local pos = tailPositions[tailIndex][i]
-                    if pos and tailTexture then
-                        tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)
-                        local alpha = (CursorGlow.tailLength - i + 1) / CursorGlow.tailLength
-                        tailTexture:SetAlpha(alpha * opacity)
-                        tailTexture:SetSize(size, size)
-                        tailTexture:Show()
-                    elseif tailTexture then
-                        tailTexture:Hide()
+
+        -- Confetti Effect (new logic!)
+        if effectStyle == "confetti" then
+            -- Setup confetti storage if missing
+            if not frame._confetti then frame._confetti = {} end
+            local confetti = frame._confetti
+
+            -- Burst more particles on movement!
+            for i = 1, 12 do
+                local angle = math.random() * 2 * math.pi
+                local dist = math.random(12, 48)
+                -- Strong colors: one channel is always full
+                local colorChannels = {math.random(), math.random(), math.random()}
+                local maxChannel = math.random(1, 3)
+                colorChannels[maxChannel] = 1
+                table.insert(confetti, {
+                    x = (cursorX / scale) + math.cos(angle) * dist,
+                    y = (cursorY / scale) + math.sin(angle) * dist,
+                    t = tnow,
+                    color = colorChannels,
+                    size = math.random(10, size),
+                    alpha = 1,
+                    ttl = math.random(0.18, 0.38)
+                })
+            end
+
+            -- Draw and fade confetti
+            for i = #confetti, 1, -1 do
+                local p = confetti[i]
+                local age = tnow - p.t
+                local alpha = Clamp01(math.max(1 - age / p.ttl, 0) * opacity)
+                if tailTextures[1][i] then
+                    tailTextures[1][i]:SetPoint("CENTER", UIParent, "BOTTOMLEFT", p.x, p.y)
+                    tailTextures[1][i]:SetSize(p.size, p.size)
+                    tailTextures[1][i]:SetAlpha(alpha)
+                    tailTextures[1][i]:SetVertexColor(
+                        Clamp01(p.color[1]),
+                        Clamp01(p.color[2]),
+                        Clamp01(p.color[3]),
+                        alpha
+                    )
+                    if alpha > 0 then
+                        tailTextures[1][i]:Show()
+                    else
+                        tailTextures[1][i]:Hide()
                     end
                 end
+                if alpha <= 0 then
+                    table.remove(confetti, i)
+                end
             end
-        else
-            for _, tailGroup in pairs(tailTextures) do
-                for _, tailTexture in ipairs(tailGroup or {}) do tailTexture:Hide() end
+            prevX, prevY = cursorX, cursorY
+            return
+        end
+		
+        for tailIndex = 1, numTails do
+            local offset = (tailIndex - (numTails + 1) / 2) * tailSpacing * scale
+            local basePos = { x = (cursorX + offset) / scale, y = cursorY / scale }
+            tailPositions[tailIndex] = tailPositions[tailIndex] or {}
+            tailTextures[tailIndex] = tailTextures[tailIndex] or {}
+
+            if effectStyle == "classic" or effectStyle == "shadow" or effectStyle == "comet"
+              or effectStyle == "pulse" or effectStyle == "twist"
+              or effectStyle == "wave" or effectStyle == "bounce"
+              or effectStyle == "rainbow" or effectStyle == "flicker" then
+                table.insert(tailPositions[tailIndex], 1, {x=basePos.x, y=basePos.y, t=tnow})
+                if #tailPositions[tailIndex] > tailLength then table.remove(tailPositions[tailIndex]) end
+            elseif effectStyle == "helix" then
+                table.insert(tailPositions[tailIndex], 1, {x=basePos.x, y=basePos.y, t=tnow, helix=tailIndex})
+                if #tailPositions[tailIndex] > tailLength then table.remove(tailPositions[tailIndex]) end
             end
-            wipe(tailPositions)
+
+            for i = 1, tailLength do
+                local pos = tailPositions[tailIndex][i]
+                local tailTexture = tailTextures[tailIndex][i]
+                if not pos or not tailTexture then
+                    if tailTexture then tailTexture:Hide() end
+                else
+                    local progress = (tailLength - i + 1) / tailLength
+                    local age = tnow - (pos.t or tnow)
+                    local fade = Clamp01(math.max(1 - (age / fadeSpeed), 0))
+                    local sparkleSize = size * fade
+                    local display = fade > 0
+                    local x, y = pos.x, pos.y
+                    local r, g, b = color[1], color[2], color[3]
+                    local alpha = Clamp01(fade * opacity)
+
+                    if effectStyle == "classic" then
+                        tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", x, y)
+                        tailTexture:SetAlpha(alpha)
+                        tailTexture:SetSize(size, size)
+                        tailTexture:SetVertexColor(Clamp01(r), Clamp01(g), Clamp01(b), alpha)
+
+                    elseif effectStyle == "rainbow" then
+                        local h = ((i/tailLength) + (tnow*0.5)) % 1
+                        r, g, b = HSVtoRGB(h, 1, 1)
+                        tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", x, y)
+                        tailTexture:SetAlpha(alpha)
+                        tailTexture:SetSize(size, size)
+                        tailTexture:SetVertexColor(Clamp01(r), Clamp01(g), Clamp01(b), alpha)
+
+                    elseif effectStyle == "pulse" then
+                        local pulse = 0.8 + 0.2 * math.sin(tnow*7 + i)
+                        tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", x, y)
+                        tailTexture:SetAlpha(alpha)
+                        tailTexture:SetSize(size * pulse, size * pulse)
+                        tailTexture:SetVertexColor(Clamp01(r), Clamp01(g), Clamp01(b), alpha)
+
+                    elseif effectStyle == "twist" then
+                        local angle = (i / tailLength) * 2 * math.pi + tnow*2
+                        local spiralRadius = 10 + 8 * fade
+                        tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT",
+                            x + spiralRadius*math.cos(angle),
+                            y + spiralRadius*math.sin(angle))
+                        tailTexture:SetAlpha(alpha)
+                        tailTexture:SetSize(size, size)
+                        tailTexture:SetVertexColor(Clamp01(r), Clamp01(g), Clamp01(b), alpha)
+
+                    elseif effectStyle == "wave" then
+                        local wave = math.sin(tnow*5 + i) * 12 * fade
+                        tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", x, y + wave)
+                        tailTexture:SetAlpha(alpha)
+                        tailTexture:SetSize(size, size)
+                        tailTexture:SetVertexColor(Clamp01(r), Clamp01(g), Clamp01(b), alpha)
+
+                    elseif effectStyle == "comet" then
+                        local cometFade = Clamp01(fade^3)
+                        local cometSize = size * cometFade
+                        tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", x, y)
+                        tailTexture:SetAlpha(cometFade)
+                        tailTexture:SetSize(cometSize, cometSize)
+                        tailTexture:SetVertexColor(Clamp01(r), Clamp01(g), Clamp01(b), cometFade)
+
+                    elseif effectStyle == "flicker" then
+                        local flicker = 0.85 + math.random()*0.3
+                        local flickerAlpha = Clamp01(alpha * flicker)
+                        tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", x, y)
+                        tailTexture:SetAlpha(flickerAlpha)
+                        tailTexture:SetSize(size * flicker, size * flicker)
+                        tailTexture:SetVertexColor(Clamp01(r), Clamp01(g), Clamp01(b), flickerAlpha)
+
+                    elseif effectStyle == "bounce" then
+                        local bounce = math.abs(math.sin(tnow*6 + i)) * 28 * fade
+                        tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", x, y + bounce)
+                        tailTexture:SetAlpha(alpha)
+                        tailTexture:SetSize(size, size)
+                        tailTexture:SetVertexColor(Clamp01(r), Clamp01(g), Clamp01(b), alpha)
+
+                    elseif effectStyle == "helix" then
+                        local helixDir = (tailIndex == 1) and 1 or -1
+                        local helixAngle = helixDir * (i/tailLength)*3*math.pi + tnow*3
+                        local helixRadius = 16 + 12 * fade
+                        tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT",
+                            x + helixRadius*math.cos(helixAngle),
+                            y + helixRadius*math.sin(helixAngle))
+                        tailTexture:SetAlpha(alpha)
+                        tailTexture:SetSize(size, size)      
+                        tailTexture:SetVertexColor(Clamp01(r), Clamp01(g), Clamp01(b), alpha)
+                    end
+
+                    if display then tailTexture:Show() else tailTexture:Hide() end
+                end
+            end
         end
     else
         stationaryTime = stationaryTime + elapsed
         if profile.pulseEnabled then
             if stationaryTime >= 0.5 then
                 pulseElapsedTime = pulseElapsedTime + elapsed
-                local pulseSpeed = profile.pulseSpeed or 1
+                local pulseSpeed = tonumber(profile.pulseSpeed) or 1
                 local pulseProgress = (math.sin(pulseElapsedTime * pulseSpeed * math.pi * 2) + 1) / 2
                 local pulseSize = profile.pulseMinSize + (profile.pulseMaxSize - profile.pulseMinSize) * pulseProgress
                 texture:SetHeight(pulseSize)
@@ -986,22 +1233,21 @@ frame:SetScript("OnUpdate", function(self, elapsed)
             texture:Hide()
         end
 
-        -- Idle ZZZ Indicator Logic
         if profile.idleIndicatorEnabled then
-    if stationaryTime > (profile.idleThreshold or 60) then
-        zzzFont:Show()
-        local scale = UIParent:GetEffectiveScale()
-        local wobble = math.sin(GetTime() * 2) * 5
-        local flashAlpha = 0.5 + 0.5 * math.sin(GetTime() * 4)
-        zzzFont:ClearAllPoints()
-        zzzFont:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cursorX / scale, (cursorY / scale) + 30 + wobble)
-        zzzFont:SetAlpha(flashAlpha)
-    else
-        zzzFont:Hide()
-    end
-else
-    zzzFont:Hide()
-end
+            if stationaryTime > (profile.idleThreshold or 60) then
+                zzzFont:Show()
+                local scale = UIParent:GetEffectiveScale()
+                local wobble = math.sin(GetTime() * 2) * 5
+                local flashAlpha = Clamp01(0.5 + 0.5 * math.sin(GetTime() * 4))
+                zzzFont:ClearAllPoints()
+                zzzFont:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cursorX / scale, (cursorY / scale) + 30 + wobble)
+                zzzFont:SetAlpha(flashAlpha)
+            else
+                zzzFont:Hide()
+            end
+        else
+            zzzFont:Hide()
+        end
 
         if profile.enableTail then
             if stationaryTime >= 1 then
@@ -1010,11 +1256,13 @@ end
                 for tailIndex = 1, numTails do
                     for i, tailTexture in ipairs(tailTextures[tailIndex] or {}) do
                         local pos = tailPositions[tailIndex] and tailPositions[tailIndex][i]
+                        local alpha = 0
                         if pos and tailTexture then
+                            alpha = Clamp01(((CursorGlow.tailLength - i + 1) / CursorGlow.tailLength) * math.max(1 - stationaryTime, 0) * opacity)
                             tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)
-                            local alpha = ((CursorGlow.tailLength - i + 1) / CursorGlow.tailLength) * math.max(1 - stationaryTime, 0)
-                            tailTexture:SetAlpha(alpha * opacity)
+                            tailTexture:SetAlpha(alpha)
                             tailTexture:SetSize(size * alpha, size * alpha)
+                            tailTexture:SetVertexColor(Clamp01(r), Clamp01(g), Clamp01(b), alpha)
                             if alpha > 0 then tailTexture:Show() else tailTexture:Hide() end
                         elseif tailTexture then
                             tailTexture:Hide()
@@ -1022,12 +1270,8 @@ end
                     end
                 end
             end
-        else
-            for _, tailGroup in pairs(tailTextures) do
-                for _, tailTexture in ipairs(tailGroup or {}) do tailTexture:Hide() end
-            end
-            wipe(tailPositions)
         end
     end
+
     prevX, prevY = cursorX, cursorY   
 end)
