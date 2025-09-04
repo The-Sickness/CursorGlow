@@ -18,6 +18,7 @@ local CursorGlow = AceAddon:NewAddon("CursorGlow", "AceEvent-3.0", "AceConsole-3
 
 local NUM_PARTICLES = 100
 local EXPLOSION_SPEED = 30
+CursorGlow.rotationAngle = 0 
 
 local textureOptions = {
     ["ring1"] = "Interface\\Addons\\CursorGlow\\Textures\\Test2.png",
@@ -299,6 +300,8 @@ local profileDefaults = {
         tailParticleSpeed = 0.5,
         tailParticleScatter = 6,
         tailParticleWobble = 5,
+		rotationEnabled = false,
+        rotationSpeed = 30, -- degrees per second
     }
 }
 local globalDefaults = { global = { profileEnabled = false } }
@@ -315,8 +318,8 @@ function CursorGlow:ApplySettings()
     profile.pulseMaxSize = profile.pulseMaxSize or 100
     profile.pulseSpeed = profile.pulseSpeed or 1
     if profile.idleIndicatorEnabled == nil then
-    profile.idleIndicatorEnabled = true
-end
+        profile.idleIndicatorEnabled = true
+    end
     profile.idleThreshold = profile.idleThreshold or 60
     profile.tailEffectStyle = profile.tailEffectStyle or "classic"
     profile.tailParticleSpeed = profile.tailParticleSpeed or 0.5
@@ -327,7 +330,16 @@ end
     UpdateAddonVisibility()
     CursorGlow.tailLength = profile.tailLength or 60
     InitializeTailTextures()
-    if profile.minimap.hide then icon:Hide("CursorGlow") else icon:Show("CursorGlow") end   
+    if profile.minimap.hide then
+        icon:Hide("CursorGlow")
+    else
+        icon:Show("CursorGlow")
+    end
+
+    if not self.db.profile.rotationEnabled and self.texture then
+        self.rotationAngle = 0
+        self.texture:SetRotation(0)
+    end
 end
 
 function CursorGlow:SwitchProfile(forceGlobal, profileName)
@@ -616,6 +628,34 @@ end,
                         CursorGlow.db.profile.opacity = val
                         UpdateTextureColor(CursorGlow.db.profile.color)
                     end,
+					},
+					rotationEnabled = {
+                    type = 'toggle',
+                    name = "Enable Rotation",
+                    desc = "Slowly rotate the main cursor texture.",
+                    order = 3.1,
+                    get = function() return CursorGlow.db.profile.rotationEnabled end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.rotationEnabled = val
+                        if not val and CursorGlow.texture then
+                            CursorGlow.rotationAngle = 0
+                            CursorGlow.texture:SetRotation(0)
+                        end
+                    end,
+                },
+                rotationSpeed = {
+                    type = 'range',
+                    name = "Rotation Speed",
+                    desc = "Degrees per second for rotation.",
+                    order = 3.2,
+                    min = 5,
+                    max = 360,
+                    step = 5,
+                    get = function() return CursorGlow.db.profile.rotationSpeed end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.rotationSpeed = val
+                    end,
+                    disabled = function() return not CursorGlow.db.profile.rotationEnabled end,
                 },
                 spacerAppearance1 = {
                     type = 'description',
@@ -944,6 +984,19 @@ frame:SetScript("OnUpdate", function(self, elapsed)
         texture:SetWidth(size)
         texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cursorX / scale, cursorY / scale)
         texture:Show()
+
+        -- Rotation feature
+        if CursorGlow.db.profile.rotationEnabled and texture then
+            CursorGlow.rotationAngle = (CursorGlow.rotationAngle or 0) + ((CursorGlow.db.profile.rotationSpeed or 30) * math.pi/180) * elapsed
+            if CursorGlow.rotationAngle > math.pi * 2 then
+                CursorGlow.rotationAngle = CursorGlow.rotationAngle - math.pi * 2
+            end
+            texture:SetRotation(CursorGlow.rotationAngle)
+        elseif texture and CursorGlow.rotationAngle ~= 0 then
+            CursorGlow.rotationAngle = 0
+            texture:SetRotation(0)
+        end
+
         prevX, prevY = cursorX, cursorY
         return
     end
@@ -1080,18 +1133,18 @@ frame:SetScript("OnUpdate", function(self, elapsed)
                             local h = ((i/CursorGlow.tailLength) + (GetTime()*0.5)) % 1
                             local function HSVtoRGB(h, s, v)
                                 local r, g, b
-                                local i = math.floor(h * 6)
-                                local f = h * 6 - i
+                                local i2 = math.floor(h * 6)
+                                local f = h * 6 - i2
                                 local p = v * (1 - s)
                                 local q = v * (1 - f * s)
                                 local t = v * (1 - (1 - f) * s)
-                                i = i % 6
-                                if i == 0 then r, g, b = v, t, p
-                                elseif i == 1 then r, g, b = q, v, p
-                                elseif i == 2 then r, g, b = p, v, t
-                                elseif i == 3 then r, g, b = p, q, v
-                                elseif i == 4 then r, g, b = t, p, v
-                                elseif i == 5 then r, g, b = v, p, q end
+                                i2 = i2 % 6
+                                if i2 == 0 then r, g, b = v, t, p
+                                elseif i2 == 1 then r, g, b = q, v, p
+                                elseif i2 == 2 then r, g, b = p, v, t
+                                elseif i2 == 3 then r, g, b = p, q, v
+                                elseif i2 == 4 then r, g, b = t, p, v
+                                elseif i2 == 5 then r, g, b = v, p, q end
                                 return r, g, b
                             end
                             local r, g, b = HSVtoRGB(h, 1, 1)
@@ -1229,7 +1282,6 @@ frame:SetScript("OnUpdate", function(self, elapsed)
         if profile.idleIndicatorEnabled then
             if stationaryTime > (profile.idleThreshold or 60) then
                 zzzFont:Show()
-                local scale = UIParent:GetEffectiveScale()
                 local wobble = math.sin(GetTime() * 2) * 5
                 local flashAlpha = 0.5 + 0.5 * math.sin(GetTime() * 4)
                 zzzFont:ClearAllPoints()
@@ -1246,7 +1298,6 @@ frame:SetScript("OnUpdate", function(self, elapsed)
             if stationaryTime >= 1 then
                 wipe(tailPositions)
             else
-                -- Fadeout logic for stationary cursor, uses current tail style
                 for tailIndex = 1, numTails do
                     for i, tailTexture in ipairs(tailTextures[tailIndex] or {}) do
                         local pos = tailPositions[tailIndex] and tailPositions[tailIndex][i]
@@ -1270,5 +1321,18 @@ frame:SetScript("OnUpdate", function(self, elapsed)
             wipe(tailPositions)
         end
     end
+
+    -- Rotation feature (normal path)
+    if CursorGlow.db.profile.rotationEnabled and texture then
+        CursorGlow.rotationAngle = (CursorGlow.rotationAngle or 0) + ((CursorGlow.db.profile.rotationSpeed or 30) * math.pi/180) * elapsed
+        if CursorGlow.rotationAngle > math.pi * 2 then
+            CursorGlow.rotationAngle = CursorGlow.rotationAngle - math.pi * 2
+        end
+        texture:SetRotation(CursorGlow.rotationAngle)
+    elseif texture and CursorGlow.rotationAngle ~= 0 then
+        CursorGlow.rotationAngle = 0
+        texture:SetRotation(0)
+    end
+
     prevX, prevY = cursorX, cursorY
 end)
