@@ -302,6 +302,9 @@ local profileDefaults = {
         tailParticleWobble = 5,
 		rotationEnabled = false,
         rotationSpeed = 30, -- degrees per second
+		bounceEnabled = false,
+        bounceSpeed = 2,      -- cycles per second
+        bounceAmplitude = 12, -- vertical pixels
     }
 }
 local globalDefaults = { global = { profileEnabled = false } }
@@ -656,6 +659,38 @@ end,
                         CursorGlow.db.profile.rotationSpeed = val
                     end,
                     disabled = function() return not CursorGlow.db.profile.rotationEnabled end,
+					},
+					bounceEnabled = {
+    type = 'toggle',
+    name = "Enable Bounce",
+    desc = "Make the cursor move up and down.",
+    order = 3.3,
+    get = function() return CursorGlow.db.profile.bounceEnabled end,
+    set = function(_, val) CursorGlow.db.profile.bounceEnabled = val end,
+},
+bounceSpeed = {
+    type = 'range',
+    name = "Bounce Speed",
+    desc = "Number of up/down cycles per second.",
+    order = 3.4,
+    min = 0.2,
+    max = 5,
+    step = 0.1,
+    get = function() return CursorGlow.db.profile.bounceSpeed end,
+    set = function(_, val) CursorGlow.db.profile.bounceSpeed = val end,
+    disabled = function() return not CursorGlow.db.profile.bounceEnabled end,
+},
+bounceAmplitude = {
+    type = 'range',
+    name = "Bounce Amplitude",
+    desc = "Vertical distance (pixels) of the bounce.",
+    order = 3.5,
+    min = 2,
+    max = 64,
+    step = 1,
+    get = function() return CursorGlow.db.profile.bounceAmplitude end,
+    set = function(_, val) CursorGlow.db.profile.bounceAmplitude = val end,
+    disabled = function() return not CursorGlow.db.profile.bounceEnabled end,
                 },
                 spacerAppearance1 = {
                     type = 'description',
@@ -979,10 +1014,18 @@ frame:SetScript("OnUpdate", function(self, elapsed)
 
     zzzFont:Hide()
 
+    -- Bounce offset (in pixels, applied before dividing by scale)
+    local bounceOffsetY = 0
+    if profile.bounceEnabled then
+        local speedCycles = profile.bounceSpeed or 2
+        local amp = profile.bounceAmplitude or 12
+        bounceOffsetY = math.sin(GetTime() * speedCycles * math.pi * 2) * amp
+    end
+
     if profile.operationMode == "enabledAlwaysOnCursor" then
         texture:SetHeight(size)
         texture:SetWidth(size)
-        texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cursorX / scale, cursorY / scale)
+        texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cursorX / scale, (cursorY + bounceOffsetY) / scale)
         texture:Show()
 
         -- Rotation feature
@@ -1019,7 +1062,10 @@ frame:SetScript("OnUpdate", function(self, elapsed)
         size = math.max(math.min(speed / 6, profile.maxSize), profile.minSize)
         texture:SetHeight(size)
         texture:SetWidth(size)
-        texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", (cursorX + 0.5 * dX) / scale, (cursorY + 0.5 * dY) / scale)
+        texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT",
+            (cursorX + 0.5 * dX) / scale,
+            (cursorY + 0.5 * dY + bounceOffsetY) / scale
+        )
         texture:Show()
         zzzFont:Hide()
         if profile.enableTail then
@@ -1131,20 +1177,20 @@ frame:SetScript("OnUpdate", function(self, elapsed)
                         local pos = tailPositions[tailIndex][i]
                         if pos and tailTexture then
                             local h = ((i/CursorGlow.tailLength) + (GetTime()*0.5)) % 1
-                            local function HSVtoRGB(h, s, v)
+                            local function HSVtoRGB(hh, s, v)
                                 local r, g, b
-                                local i2 = math.floor(h * 6)
-                                local f = h * 6 - i2
+                                local ii = math.floor(hh * 6)
+                                local f = hh * 6 - ii
                                 local p = v * (1 - s)
                                 local q = v * (1 - f * s)
                                 local t = v * (1 - (1 - f) * s)
-                                i2 = i2 % 6
-                                if i2 == 0 then r, g, b = v, t, p
-                                elseif i2 == 1 then r, g, b = q, v, p
-                                elseif i2 == 2 then r, g, b = p, v, t
-                                elseif i2 == 3 then r, g, b = p, q, v
-                                elseif i2 == 4 then r, g, b = t, p, v
-                                elseif i2 == 5 then r, g, b = v, p, q end
+                                ii = ii % 6
+                                if ii == 0 then r, g, b = v, t, p
+                                elseif ii == 1 then r, g, b = q, v, p
+                                elseif ii == 2 then r, g, b = p, v, t
+                                elseif ii == 3 then r, g, b = p, q, v
+                                elseif ii == 4 then r, g, b = t, p, v
+                                elseif ii == 5 then r, g, b = v, p, q end
                                 return r, g, b
                             end
                             local r, g, b = HSVtoRGB(h, 1, 1)
@@ -1205,7 +1251,10 @@ frame:SetScript("OnUpdate", function(self, elapsed)
                             local angle = (i / CursorGlow.tailLength) * 2 * math.pi + GetTime()*2
                             local spiralRadius = 10 + 8 * ((CursorGlow.tailLength-i+1)/CursorGlow.tailLength)
                             local alpha = ((CursorGlow.tailLength-i+1)/CursorGlow.tailLength) * opacity
-                            tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x + spiralRadius*math.cos(angle), pos.y + spiralRadius*math.sin(angle))
+                            tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT",
+                                pos.x + spiralRadius*math.cos(angle),
+                                pos.y + spiralRadius*math.sin(angle)
+                            )
                             tailTexture:SetAlpha(alpha)
                             tailTexture:SetSize(size, size)
                             tailTexture:SetVertexColor(colorValue[1], colorValue[2], colorValue[3], alpha)
@@ -1269,7 +1318,10 @@ frame:SetScript("OnUpdate", function(self, elapsed)
                 local pulseSize = profile.pulseMinSize + (profile.pulseMaxSize - profile.pulseMinSize) * pulseProgress
                 texture:SetHeight(pulseSize)
                 texture:SetWidth(pulseSize)
-                texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cursorX / scale, cursorY / scale)
+                texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT",
+                    cursorX / scale,
+                    (cursorY + bounceOffsetY) / scale
+                )
                 texture:SetAlpha(opacity)
                 texture:Show()
             else
@@ -1285,7 +1337,10 @@ frame:SetScript("OnUpdate", function(self, elapsed)
                 local wobble = math.sin(GetTime() * 2) * 5
                 local flashAlpha = 0.5 + 0.5 * math.sin(GetTime() * 4)
                 zzzFont:ClearAllPoints()
-                zzzFont:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cursorX / scale, (cursorY / scale) + 30 + wobble)
+                zzzFont:SetPoint("CENTER", UIParent, "BOTTOMLEFT",
+                    cursorX / scale,
+                    (cursorY / scale) + 30 + wobble
+                )
                 zzzFont:SetAlpha(flashAlpha)
             else
                 zzzFont:Hide()
