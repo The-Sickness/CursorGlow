@@ -2,7 +2,6 @@
 -- Made by Sharpedge_Gaming
 -- v6.3 
 
-
 local LibStub = LibStub or _G.LibStub
 local AceDB            = LibStub:GetLibrary("AceDB-3.0")
 local AceAddon         = LibStub:GetLibrary("AceAddon-3.0")
@@ -16,6 +15,7 @@ local icon             = LibStub("LibDBIcon-1.0")
 local L                = LibStub("AceLocale-3.0"):GetLocale("CursorGlow", true)
 
 local CursorGlow = AceAddon:NewAddon("CursorGlow", "AceEvent-3.0", "AceConsole-3.0")
+
 
 local NUM_PARTICLES   = 100
 local EXPLOSION_SPEED = 30
@@ -665,6 +665,61 @@ local options = {
                     get=function() return CursorGlow.db.profile.pulseSpeed end,
                     set=function(_, v) CursorGlow.db.profile.pulseSpeed = v end,
                     disabled=function() return not CursorGlow.db.profile.pulseEnabled end,
+					},
+					},
+					},
+					performanceHeader = { type='header', name="Performance Controls", order=100 },
+performanceSettings = {
+    type = 'group',
+    name = "Performance Manager",
+    order = 101,
+    inline = true,
+    args = {
+        performanceEnabled = {
+            type = 'toggle',
+            name = "Enable Performance Controls",
+            desc = "Turns on adaptive performance features for CursorGlow. When enabled, the addon can automatically reduce visual effects if your FPS drops and allow you to fine-tune the number of particles.",
+            get = function() return CursorGlow.db.profile.performanceEnabled end,
+            set = function(_, val) CursorGlow.db.profile.performanceEnabled = val end,
+            order = 1,
+        },
+        autoPerformanceMode = {
+            type = 'toggle',
+            name = "Auto Performance Mode",
+            desc = "CursorGlow will monitor your frame rate and reduce particle effects if FPS drops below the threshold.",
+            get = function() return CursorGlow.db.profile.autoPerformanceMode end,
+            set = function(_, val) CursorGlow.db.profile.autoPerformanceMode = val end,
+            disabled = function() return not CursorGlow.db.profile.performanceEnabled end,
+            order = 2,
+        },
+        maxFPS = {
+            type = 'range',
+            name = "Max FPS (Effect Update Rate)",
+            desc = "Sets the maximum update rate for CursorGlow’s visual effects. Set this near your monitor’s refresh rate for best smoothness.",
+            min = 10, max = 360, step = 1,
+            get = function() return CursorGlow.db.profile.maxFPS or 120 end,
+            set = function(_, val) CursorGlow.db.profile.maxFPS = val end,
+            order = 3,
+        },
+        performanceFPSThreshold = {
+            type = 'range',
+            name = "FPS Threshold",
+            desc = "If your FPS drops below this, performance mode will activate.",
+            min = 10, max = 360, step = 1,
+            get = function() return CursorGlow.db.profile.performanceFPSThreshold or 30 end,
+            set = function(_, val) CursorGlow.db.profile.performanceFPSThreshold = val end,
+            disabled = function() return not CursorGlow.db.profile.autoPerformanceMode end,
+            order = 4,
+        },
+        maxParticles = {
+            type = 'range',
+            name = "Max Particles",
+            desc = "Max tail/explosion particles. Lower for better performance.",
+            min = 10, max = 200, step = 1,
+            get = function() return CursorGlow.db.profile.maxParticles or 60 end,
+            set = function(_, val) CursorGlow.db.profile.maxParticles = val end,
+            order = 5,
+        
                 },
             },
         },
@@ -1059,6 +1114,7 @@ frame:SetScript("OnUpdate", function(_, elapsed)
             local numTails       = tonumber(profile.numTails) or 1
             local tailSpacing    = tonumber(profile.tailSpacing) or 10
             CursorGlow.tailLength = tonumber(CursorGlow.tailLength) or 60
+			CursorGlow.tailLength = PerformanceManager:GetRecommendedParticleCount()
 
             for tailIndex = 1, numTails do
                 local offset    = (tailIndex - (numTails + 1)/2) * tailSpacing * scale
