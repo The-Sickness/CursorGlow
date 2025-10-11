@@ -1,6 +1,6 @@
 -- CursorGlow
 -- Made by Sharpedge_Gaming
--- v6.3 
+-- v6.4
 
 local LibStub = LibStub or _G.LibStub
 local AceDB            = LibStub:GetLibrary("AceDB-3.0")
@@ -311,7 +311,8 @@ local profileDefaults = {
         enabled = true,
         idleIndicatorEnabled = true,
         idleThreshold = 60,
-        tailEffectStyle = "classic",
+        tailEffectStyle = "classic", -- now supports "fire", "electric", "bubble", etc.
+        tailEffectStyles = { "classic", "rainbow", "sparkle", "wobble", "burst", "comet", "pulse", "twist", "wave", "bounce", "fire", "electric", "bubble", "ribbon" },
         tailParticleSpeed = 0.5,
         tailParticleScatter = 6,
         tailParticleWobble = 5,
@@ -320,6 +321,8 @@ local profileDefaults = {
         bounceEnabled = false,
         bounceSpeed = 2,
         bounceAmplitude = 12,
+		staticSizeEnabled = false,
+		
     }
 }
 local globalDefaults = { global = { profileEnabled = false } }
@@ -340,6 +343,7 @@ function CursorGlow:ApplySettings()
     profile.explosionColor      = profile.explosionColor or {1,1,1}
     profile.minSize             = profile.minSize or 16
     profile.maxSize             = profile.maxSize or 175
+	profile.staticSizeEnabled   = profile.staticSizeEnabled or false
     profile.pulseEnabled        = profile.pulseEnabled or false
     profile.pulseMinSize        = profile.pulseMinSize or 50
     profile.pulseMaxSize        = profile.pulseMaxSize or 100
@@ -447,7 +451,6 @@ local options = {
                 spacerGeneral1 = { type='description', name=" ", order=6 },
             },
         },
-
         explosionHeader = { type='header', name=L["Explosion Settings"], order=10 },
         explosion = {
             type='group', name=L["Explosion"], order=11, inline=true,
@@ -491,7 +494,6 @@ local options = {
                 },
             },
         },
-
         appearanceHeader = { type='header', name=L["Appearance Settings"], order=20 },
         appearance = {
             type='group', name=L["Appearance"], order=21, inline=true,
@@ -561,20 +563,28 @@ local options = {
                     set=function(_, v) CursorGlow.db.profile.bounceAmplitude = v end,
                     disabled=function() return not CursorGlow.db.profile.bounceEnabled end,
                 },
+                staticSizeEnabled = {
+                    type='toggle',
+                    name="Static Size (Always Use Maximum)",
+                    desc="If enabled, the cursor will always use the maximum size, regardless of movement.",
+                    order=4.5,
+                    get=function() return CursorGlow.db.profile.staticSizeEnabled end,
+                    set=function(_, val) CursorGlow.db.profile.staticSizeEnabled = val end,
+                },
                 spacerAppearance1 = { type='description', name=" ", order=4 },
                 minSize = {
-                    type='range', name=L["Minimum Size"], desc=L["Set the minimum size of the texture"], order=5, min=16, max=64, step=1,
+                    type='range', name=L["Minimum Size"], desc=L["Set the minimum size of the texture"], order=5, min=16, max=256, step=1,
                     get=function() return CursorGlow.db.profile.minSize end,
                     set=function(_, v) CursorGlow.db.profile.minSize = v end,
+                    disabled=function() return CursorGlow.db.profile.staticSizeEnabled end,
                 },
                 maxSize = {
-                    type='range', name=L["Maximum Size"], desc=L["Set the maximum size of the texture"], order=6, min=20, max=256, step=1,
+                    type='range', name=L["Maximum Size"], desc=L["Set the maximum size of the texture"], order=6, min=16, max=256, step=1,
                     get=function() return CursorGlow.db.profile.maxSize end,
                     set=function(_, v) CursorGlow.db.profile.maxSize = v end,
                 },
             },
         },
-
         tailHeader = { type='header', name=L["Tail Effect Settings"], order=30 },
         tailSettings = {
             type='group', name=L["Tail Effect"], order=31, inline=true,
@@ -611,11 +621,29 @@ local options = {
                     disabled=function() return not CursorGlow.db.profile.enableTail end,
                 },
                 tailEffectStyle = {
-                    type='select', name="Tail Effect Style", desc="Choose the animation style for the cursor tail.", order=5,
-                    values = { classic="Classic Trail", sparkle="Sparkle", wobble="Wobble", burst="Burst", rainbow="Rainbow", comet="Comet", pulse="Pulse", twist="Twist", wave="Wave", bounce="Bounce" },
-                    get=function() return CursorGlow.db.profile.tailEffectStyle or "classic" end,
-                    set=function(_, v) CursorGlow.db.profile.tailEffectStyle = v end,
-                    disabled=function() return not CursorGlow.db.profile.enableTail end,
+                    type='select',
+                    name="Tail Effect Style",
+                    desc="Choose the animation style for the cursor tail.",
+                    order=5,
+                    values = {
+                        classic = "Classic Trail",
+                        sparkle = "Sparkle",
+                        wobble = "Wobble",
+                        burst = "Burst",
+                        rainbow = "Rainbow",
+                        comet = "Comet",
+                        pulse = "Pulse",
+                        twist = "Twist",
+                        wave = "Wave",
+                        bounce = "Bounce",
+                        fire = "Fire",
+                        electric = "Electric",
+                        bubble = "Bubble",
+                        ribbon = "Ribbon"
+                    },
+                    get = function() return CursorGlow.db.profile.tailEffectStyle or "classic" end,
+                    set = function(_, v) CursorGlow.db.profile.tailEffectStyle = v end,
+                    disabled = function() return not CursorGlow.db.profile.enableTail end,
                 },
                 tailParticleSpeed = {
                     type='range', name="Particle Fade Speed", desc="How quickly particles fade out (in seconds)", order=6, min=0.2, max=2, step=0.1,
@@ -637,7 +665,6 @@ local options = {
                 },
             },
         },
-
         pulseHeader = { type='header', name=L["Pulse Effect Settings"], order=40 },
         pulseSettings = {
             type='group', name=L["Pulse Effect"], order=41, inline=true,
@@ -669,7 +696,6 @@ local options = {
         },
     },
 }
-
 -- Init
 function CursorGlow:OnInitialize()
     self.db       = AceDB:New("CursorGlowDB", profileDefaults)
@@ -787,10 +813,15 @@ frame:SetScript("OnUpdate", function(_, elapsed)
     local opacity = profile.opacity or 1
     local r,g,b = GetActiveColor()
 
-    -- Base size
-    local size = profile.minSize
-    if distance > 0 then
-        size = math.max(math.min(speed / 6, profile.maxSize), profile.minSize)
+    -- PATCHED: Base size logic
+    local size
+    if profile.staticSizeEnabled then
+        size = profile.maxSize
+    else
+        size = profile.minSize
+        if distance > 0 then
+            size = math.max(math.min(speed / 6, profile.maxSize), profile.minSize)
+        end
     end
 
     -- Bounce offset (pixels)
@@ -808,7 +839,7 @@ frame:SetScript("OnUpdate", function(_, elapsed)
             pulseElapsedTime = 0
         else
             stationaryTime = stationaryTime + elapsed
-            if profile.pulseEnabled and stationaryTime >= 0.5 then
+            if profile.pulseEnabled and stationaryTime >= 0.5 and not profile.staticSizeEnabled then
                 local pSpeed = profile.pulseSpeed or 1
                 local prog   = (math.sin(pulseElapsedTime * pSpeed * math.pi * 2) + 1) / 2
                 size = profile.pulseMinSize + (profile.pulseMaxSize - profile.pulseMinSize) * prog
@@ -872,7 +903,7 @@ frame:SetScript("OnUpdate", function(_, elapsed)
                             t = now
                         })
                     else
-                        table.insert(tailPositions[tailIndex], 1, cursorPos) -- rainbow, comet, pulse, twist, wave, bounce
+                        table.insert(tailPositions[tailIndex], 1, cursorPos) -- rainbow, comet, pulse, twist, wave, bounce, fire, electric, bubble, ribbon
                     end
 
                     if #tailPositions[tailIndex] > CursorGlow.tailLength then
@@ -890,7 +921,6 @@ frame:SetScript("OnUpdate", function(_, elapsed)
                                 tailTexture:SetSize(size, size)
                                 tailTexture:SetVertexColor(r, g, b, alphaBase * opacity)
                                 tailTexture:Show()
-
                             elseif effectStyle == "sparkle" then
                                 local age  = now - (pos.t or now)
                                 local fade = math.max(1 - (age / fadeSpeed), 0)
@@ -900,7 +930,6 @@ frame:SetScript("OnUpdate", function(_, elapsed)
                                 tailTexture:SetSize(s2, s2)
                                 tailTexture:SetVertexColor(r, g, b, fade * opacity)
                                 if fade > 0 then tailTexture:Show() else tailTexture:Hide() end
-
                             elseif effectStyle == "wobble" then
                                 local age  = now - (pos.t or now)
                                 local fade = math.max(1 - (age / fadeSpeed), 0)
@@ -911,7 +940,6 @@ frame:SetScript("OnUpdate", function(_, elapsed)
                                 tailTexture:SetSize(s2, s2)
                                 tailTexture:SetVertexColor(r, g, b, fade * opacity)
                                 if fade > 0 then tailTexture:Show() else tailTexture:Hide() end
-
                             elseif effectStyle == "burst" then
                                 local age  = now - (pos.t or now)
                                 local fade = math.max(1 - (age / (fadeSpeed*0.6)), 0)
@@ -921,7 +949,6 @@ frame:SetScript("OnUpdate", function(_, elapsed)
                                 tailTexture:SetSize(s2, s2)
                                 tailTexture:SetVertexColor(r, g, b, fade * opacity)
                                 if fade > 0 then tailTexture:Show() else tailTexture:Hide() end
-
                             elseif effectStyle == "rainbow" then
                                 local h = ((i / CursorGlow.tailLength) + (now*0.5)) % 1
                                 local rr,gg,bb = HSVtoRGB(h, 1, 1)
@@ -930,7 +957,6 @@ frame:SetScript("OnUpdate", function(_, elapsed)
                                 tailTexture:SetVertexColor(rr, gg, bb, alphaBase * opacity)
                                 tailTexture:SetSize(size, size)
                                 tailTexture:Show()
-
                             elseif effectStyle == "comet" then
                                 local fade = alphaBase
                                 local cometAlpha = fade^3
@@ -940,7 +966,6 @@ frame:SetScript("OnUpdate", function(_, elapsed)
                                 tailTexture:SetSize(cometSize, cometSize)
                                 tailTexture:SetVertexColor(r, g, b, cometAlpha * opacity)
                                 tailTexture:Show()
-
                             elseif effectStyle == "pulse" then
                                 local p = 0.8 + 0.2 * math.sin(now*7 + i)
                                 tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)
@@ -948,7 +973,6 @@ frame:SetScript("OnUpdate", function(_, elapsed)
                                 tailTexture:SetSize(size * p, size * p)
                                 tailTexture:SetVertexColor(r, g, b, alphaBase * opacity)
                                 tailTexture:Show()
-
                             elseif effectStyle == "twist" then
                                 local angle = (i / CursorGlow.tailLength) * 2 * math.pi + now*2
                                 local radius = 10 + 8 * ((CursorGlow.tailLength - i + 1)/CursorGlow.tailLength)
@@ -959,7 +983,6 @@ frame:SetScript("OnUpdate", function(_, elapsed)
                                 tailTexture:SetSize(size, size)
                                 tailTexture:SetVertexColor(r, g, b, alpha)
                                 tailTexture:Show()
-
                             elseif effectStyle == "wave" then
                                 local wave  = math.sin(now*5 + i) * 12 * ((CursorGlow.tailLength - i + 1)/CursorGlow.tailLength)
                                 local alpha = alphaBase * opacity
@@ -968,7 +991,6 @@ frame:SetScript("OnUpdate", function(_, elapsed)
                                 tailTexture:SetSize(size, size)
                                 tailTexture:SetVertexColor(r, g, b, alpha)
                                 tailTexture:Show()
-
                             elseif effectStyle == "bounce" then
                                 local bounce = math.abs(math.sin(now*6 + i)) * 28 * ((CursorGlow.tailLength - i + 1)/CursorGlow.tailLength)
                                 local alpha  = alphaBase * opacity
@@ -977,7 +999,46 @@ frame:SetScript("OnUpdate", function(_, elapsed)
                                 tailTexture:SetSize(size, size)
                                 tailTexture:SetVertexColor(r, g, b, alpha)
                                 tailTexture:Show()
-
+                            elseif effectStyle == "fire" then
+                                local t = i / CursorGlow.tailLength
+                                local rr = 1
+                                local gg = 0.5 + 0.5 * (1-t)
+                                local bb = 0
+                                tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)
+                                tailTexture:SetAlpha(alphaBase * opacity)
+                                tailTexture:SetSize(size, size)
+                                tailTexture:SetVertexColor(rr, gg, bb, alphaBase * opacity)
+                                tailTexture:Show()
+                            elseif effectStyle == "electric" then
+                                local jitter = math.random(-3,3)
+                                tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x + jitter, pos.y + jitter)
+                                local rr = (i % 2 == 0) and 0.2 or 1
+                                local gg = (i % 2 == 0) and 0.6 or 1
+                                local bb = 1
+                                tailTexture:SetAlpha(alphaBase * opacity)
+                                tailTexture:SetSize(size, size)
+                                tailTexture:SetVertexColor(rr, gg, bb, alphaBase * opacity)
+                                tailTexture:Show()
+                            elseif effectStyle == "ribbon" then
+                                local ribbonWidth = size * 1.8
+                                local ribbonHeight = size * 0.6
+                                local ribbonAlpha = (CursorGlow.tailLength - i + 1) / CursorGlow.tailLength * opacity * 0.25
+                                tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)
+                                tailTexture:SetSize(ribbonWidth, ribbonHeight)
+                                tailTexture:SetVertexColor(r, g, b, ribbonAlpha)
+                                tailTexture:SetBlendMode("ADD")
+                                tailTexture:Show()
+                            elseif effectStyle == "bubble" then
+                                if i % 5 == 0 then
+                                    tailTexture:SetSize(size * 1.4, size * 1.4)
+                                    tailTexture:SetAlpha(alphaBase * opacity * 0.4)
+                                else
+                                    tailTexture:SetSize(size, size)
+                                    tailTexture:SetAlpha(alphaBase * opacity)
+                                end
+                                tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)
+                                tailTexture:SetVertexColor(r, g, b, alphaBase * opacity)
+                                tailTexture:Show()
                             else
                                 tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)
                                 tailTexture:SetAlpha(alphaBase * opacity)
@@ -1075,7 +1136,7 @@ frame:SetScript("OnUpdate", function(_, elapsed)
                     local burstScatter = scatter * 2
                     table.insert(tailPositions[tailIndex], 1, { x=cursorPos.x + math.random(-burstScatter,burstScatter), y=cursorPos.y + math.random(-burstScatter,burstScatter), t=now })
                 else
-                    table.insert(tailPositions[tailIndex], 1, cursorPos) -- rainbow, comet, pulse, twist, wave, bounce
+                    table.insert(tailPositions[tailIndex], 1, cursorPos) -- rainbow, comet, pulse, twist, wave, bounce, fire, electric, bubble, ribbon
                 end
 
                 if #tailPositions[tailIndex] > CursorGlow.tailLength then table.remove(tailPositions[tailIndex]) end
@@ -1091,7 +1152,6 @@ frame:SetScript("OnUpdate", function(_, elapsed)
                             tailTexture:SetSize(size, size)
                             tailTexture:SetVertexColor(r, g, b, alphaBase * opacity)
                             tailTexture:Show()
-
                         elseif effectStyle == "sparkle" then
                             local age  = now - (pos.t or now)
                             local fade = math.max(1 - (age / fadeSpeed), 0)
@@ -1101,7 +1161,6 @@ frame:SetScript("OnUpdate", function(_, elapsed)
                             tailTexture:SetSize(s2, s2)
                             tailTexture:SetVertexColor(r, g, b, fade * opacity)
                             if fade > 0 then tailTexture:Show() else tailTexture:Hide() end
-
                         elseif effectStyle == "wobble" then
                             local age  = now - (pos.t or now)
                             local fade = math.max(1 - (age / fadeSpeed), 0)
@@ -1112,7 +1171,6 @@ frame:SetScript("OnUpdate", function(_, elapsed)
                             tailTexture:SetSize(s2, s2)
                             tailTexture:SetVertexColor(r, g, b, fade * opacity)
                             if fade > 0 then tailTexture:Show() else tailTexture:Hide() end
-
                         elseif effectStyle == "burst" then
                             local age  = now - (pos.t or now)
                             local fade = math.max(1 - (age / (fadeSpeed*0.6)), 0)
@@ -1122,16 +1180,14 @@ frame:SetScript("OnUpdate", function(_, elapsed)
                             tailTexture:SetSize(s2, s2)
                             tailTexture:SetVertexColor(r, g, b, fade * opacity)
                             if fade > 0 then tailTexture:Show() else tailTexture:Hide() end
-
                         elseif effectStyle == "rainbow" then
                             local h = ((i / CursorGlow.tailLength) + (now*0.5)) % 1
-                            local rr,gg,bb = HSVtoRGB(h,1,1)
+                            local rr,gg,bb = HSVtoRGB(h, 1, 1)
                             tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)
                             tailTexture:SetAlpha(alphaBase * opacity)
-                            tailTexture:SetVertexColor(rr,gg,bb, alphaBase * opacity)
-                            tailTexture:SetSize(size,size)
+                            tailTexture:SetVertexColor(rr, gg, bb, alphaBase * opacity)
+                            tailTexture:SetSize(size, size)
                             tailTexture:Show()
-
                         elseif effectStyle == "comet" then
                             local fade = alphaBase
                             local cometAlpha = fade^3
@@ -1141,7 +1197,6 @@ frame:SetScript("OnUpdate", function(_, elapsed)
                             tailTexture:SetSize(cometSize, cometSize)
                             tailTexture:SetVertexColor(r, g, b, cometAlpha * opacity)
                             tailTexture:Show()
-
                         elseif effectStyle == "pulse" then
                             local p = 0.8 + 0.2 * math.sin(now*7 + i)
                             tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)
@@ -1149,7 +1204,6 @@ frame:SetScript("OnUpdate", function(_, elapsed)
                             tailTexture:SetSize(size * p, size * p)
                             tailTexture:SetVertexColor(r, g, b, alphaBase * opacity)
                             tailTexture:Show()
-
                         elseif effectStyle == "twist" then
                             local angle = (i / CursorGlow.tailLength)*2*math.pi + now*2
                             local radius = 10 + 8 * ((CursorGlow.tailLength - i + 1)/CursorGlow.tailLength)
@@ -1162,7 +1216,6 @@ frame:SetScript("OnUpdate", function(_, elapsed)
                             tailTexture:SetSize(size,size)
                             tailTexture:SetVertexColor(r, g, b, alpha)
                             tailTexture:Show()
-
                         elseif effectStyle == "wave" then
                             local wave = math.sin(now*5 + i) * 12 * ((CursorGlow.tailLength - i + 1)/CursorGlow.tailLength)
                             local alpha = alphaBase * opacity
@@ -1171,7 +1224,6 @@ frame:SetScript("OnUpdate", function(_, elapsed)
                             tailTexture:SetSize(size,size)
                             tailTexture:SetVertexColor(r, g, b, alpha)
                             tailTexture:Show()
-
                         elseif effectStyle == "bounce" then
                             local bounce = math.abs(math.sin(now*6 + i)) * 28 * ((CursorGlow.tailLength - i + 1)/CursorGlow.tailLength)
                             local alpha = alphaBase * opacity
@@ -1180,7 +1232,46 @@ frame:SetScript("OnUpdate", function(_, elapsed)
                             tailTexture:SetSize(size,size)
                             tailTexture:SetVertexColor(r, g, b, alpha)
                             tailTexture:Show()
-
+                        elseif effectStyle == "fire" then
+                            local t = i / CursorGlow.tailLength
+                            local rr = 1
+                            local gg = 0.5 + 0.5 * (1-t)
+                            local bb = 0
+                            tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)
+                            tailTexture:SetAlpha(alphaBase * opacity)
+                            tailTexture:SetSize(size, size)
+                            tailTexture:SetVertexColor(rr, gg, bb, alphaBase * opacity)
+                            tailTexture:Show()
+                        elseif effectStyle == "electric" then
+                            local jitter = math.random(-3,3)
+                            tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x + jitter, pos.y + jitter)
+                            local rr = (i % 2 == 0) and 0.2 or 1
+                            local gg = (i % 2 == 0) and 0.6 or 1
+                            local bb = 1
+                            tailTexture:SetAlpha(alphaBase * opacity)
+                            tailTexture:SetSize(size, size)
+                            tailTexture:SetVertexColor(rr, gg, bb, alphaBase * opacity)
+                            tailTexture:Show()
+                        elseif effectStyle == "ribbon" then
+                            local ribbonWidth = size * 1.8
+                            local ribbonHeight = size * 0.6
+                            local ribbonAlpha = (CursorGlow.tailLength - i + 1) / CursorGlow.tailLength * opacity * 0.25
+                            tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)
+                            tailTexture:SetSize(ribbonWidth, ribbonHeight)
+                            tailTexture:SetVertexColor(r, g, b, ribbonAlpha)
+                            tailTexture:SetBlendMode("ADD")
+                            tailTexture:Show()
+                        elseif effectStyle == "bubble" then
+                            if i % 5 == 0 then
+                                tailTexture:SetSize(size * 1.4, size * 1.4)
+                                tailTexture:SetAlpha(alphaBase * opacity * 0.4)
+                            else
+                                tailTexture:SetSize(size, size)
+                                tailTexture:SetAlpha(alphaBase * opacity)
+                            end
+                            tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)
+                            tailTexture:SetVertexColor(r, g, b, alphaBase * opacity)
+                            tailTexture:Show()
                         else
                             tailTexture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", pos.x, pos.y)
                             tailTexture:SetAlpha(alphaBase * opacity)
@@ -1199,7 +1290,6 @@ frame:SetScript("OnUpdate", function(_, elapsed)
             end
             wipe(tailPositions)
         end
-
     else
         -- Stationary
         stationaryTime = stationaryTime + elapsed
