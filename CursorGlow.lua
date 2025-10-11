@@ -322,6 +322,13 @@ local profileDefaults = {
         bounceSpeed = 2,
         bounceAmplitude = 12,
 		staticSizeEnabled = false,
+		lowCPUMode = false,
+        lowCPUUpdateInterval = 100,
+        lowCPUTailLength = 20,
+        autoDisableRaid = false,
+        autoDisableLowFPS = false,
+        lowFPSThreshold = 20,
+        lowFPSFallback = "disable", -- "disable" or "lowcpu"
 		
     }
 }
@@ -343,7 +350,7 @@ function CursorGlow:ApplySettings()
     profile.explosionColor      = profile.explosionColor or {1,1,1}
     profile.minSize             = profile.minSize or 16
     profile.maxSize             = profile.maxSize or 175
-	profile.staticSizeEnabled   = profile.staticSizeEnabled or false
+    profile.staticSizeEnabled   = profile.staticSizeEnabled or false
     profile.pulseEnabled        = profile.pulseEnabled or false
     profile.pulseMinSize        = profile.pulseMinSize or 50
     profile.pulseMaxSize        = profile.pulseMaxSize or 100
@@ -355,10 +362,22 @@ function CursorGlow:ApplySettings()
     profile.tailParticleScatter = profile.tailParticleScatter or 6
     profile.tailParticleWobble  = profile.tailParticleWobble or 5
 
+    -- Respect low CPU mode
+    if profile.lowCPUMode or CursorGlow._lowCPUActive then
+        self.tailLength = profile.lowCPUTailLength or 20
+    else
+        self.tailLength = profile.tailLength or 60
+    end
+
+    if self._tempDisabled then
+        frame:Hide()
+        return
+    end
+
     UpdateTexture(profile.texture)
     UpdateTextureColor()
     UpdateAddonVisibility()
-    CursorGlow.tailLength = profile.tailLength or 60
+    CursorGlow.tailLength = self.tailLength
     InitializeTailTextures()
 
     if profile.minimap.hide then icon:Hide("CursorGlow") else icon:Show("CursorGlow") end
@@ -694,8 +713,101 @@ local options = {
                 },
             },
         },
+        performanceHeader = { type = 'header', name = "Performance & Compatibility", order = 50 },
+        performance = {
+            type = 'group',
+            name = "Performance",
+            order = 51,
+            inline = true,
+            args = {
+                lowCPUMode = {
+                    type = 'toggle',
+                    name = "Low CPU Mode",
+                    desc = "Reduce update rate and tail length for better performance on older computers.",
+                    order = 1,
+                    get = function() return CursorGlow.db.profile.lowCPUMode end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.lowCPUMode = val
+                        CursorGlow:ApplySettings()
+                    end,
+                },
+                lowCPUUpdateInterval = {
+                    type = 'range',
+                    name = "Low CPU Update Interval (ms)",
+                    desc = "Milliseconds between updates when Low CPU Mode is active.",
+                    order = 2,
+                    min = 20, max = 500, step = 10,
+                    get = function() return CursorGlow.db.profile.lowCPUUpdateInterval or 100 end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.lowCPUUpdateInterval = val
+                    end,
+                    disabled = function() return not CursorGlow.db.profile.lowCPUMode end,
+                },
+                lowCPUTailLength = {
+                    type = 'range',
+                    name = "Low CPU Tail Length",
+                    desc = "Number of tail segments when Low CPU Mode is active.",
+                    order = 3,
+                    min = 5, max = 60, step = 1,
+                    get = function() return CursorGlow.db.profile.lowCPUTailLength or 20 end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.lowCPUTailLength = val
+                    end,
+                    disabled = function() return not CursorGlow.db.profile.lowCPUMode end,
+                },
+                autoDisableRaid = {
+                    type = 'toggle',
+                    name = "Auto-disable in Raid/Party",
+                    desc = "Disable CursorGlow in raids, parties, or battlegrounds.",
+                    order = 4,
+                    get = function() return CursorGlow.db.profile.autoDisableRaid end,
+                    set = function(_, val) CursorGlow.db.profile.autoDisableRaid = val end,
+                },
+                autoDisableLowFPS = {
+                    type = 'toggle',
+                    name = "Auto-disable on Low FPS",
+                    desc = "Automatically disable or switch to Low CPU Mode when framerate drops.",
+                    order = 5,
+                    get = function() return CursorGlow.db.profile.autoDisableLowFPS end,
+                    set = function(_, val) CursorGlow.db.profile.autoDisableLowFPS = val end,
+                },
+                lowFPSThreshold = {
+                    type = 'range',
+                    name = "Low FPS Threshold",
+                    desc = "FPS threshold for auto-disable.",
+                    order = 6,
+                    min = 10, max = 60, step = 1,
+                    get = function() return CursorGlow.db.profile.lowFPSThreshold or 20 end,
+                    set = function(_, val) CursorGlow.db.profile.lowFPSThreshold = val end,
+                    disabled = function() return not CursorGlow.db.profile.autoDisableLowFPS end,
+                },
+                lowFPSFallback = {
+                    type = 'select',
+                    name = "Low FPS Fallback Mode",
+                    desc = "Choose what happens when FPS is low.",
+                    order = 7,
+                    values = { ["disable"] = "Disable CursorGlow", ["lowcpu"] = "Switch to Low CPU Mode" },
+                    get = function() return CursorGlow.db.profile.lowFPSFallback or "disable" end,
+                    set = function(_, val) CursorGlow.db.profile.lowFPSFallback = val end,
+                    disabled = function() return not CursorGlow.db.profile.autoDisableLowFPS end,
+                },
+            },
+        },
     },
 }
+
+local function IsInLargeGroup()
+    return IsInRaid() or IsInGroup() or IsInBattlefield() -- WoW API
+end
+
+local function CheckRaidPartyDisable()
+    if CursorGlow.db.profile.autoDisableRaid and IsInLargeGroup() then
+        CursorGlow:DisableAddonTemporarily("raid")
+    elseif CursorGlow._tempDisabled == "raid" then
+        CursorGlow:EnableAddonAfterTemp()
+    end
+end
+
 -- Init
 function CursorGlow:OnInitialize()
     self.db       = AceDB:New("CursorGlowDB", profileDefaults)
@@ -716,6 +828,8 @@ function CursorGlow:OnInitialize()
     end
 
     self:ApplySettings()
+	self:StartFPSTimer()
+    CheckRaidPartyDisable()
 
     if minimapButton and icon then
         icon:Register("CursorGlow", minimapButton, self.db.profile.minimap)
@@ -736,6 +850,49 @@ frame:RegisterEvent("PLAYER_REGEN_DISABLED")
 frame:RegisterEvent("PLAYER_REGEN_ENABLED")
 frame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+
+frame:RegisterEvent("GROUP_ROSTER_UPDATE")
+frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+
+local fpsTimer
+local function CheckLowFPS()
+    if CursorGlow.db.profile.autoDisableLowFPS then
+        local fps = GetFramerate()
+        if fps < (CursorGlow.db.profile.lowFPSThreshold or 20) then
+            if CursorGlow.db.profile.lowFPSFallback == "disable" then
+                CursorGlow:DisableAddonTemporarily("fps")
+            else
+                CursorGlow:SetLowCPUModeActive(true)
+            end
+        else
+            if CursorGlow._tempDisabled == "fps" then
+                CursorGlow:EnableAddonAfterTemp()
+            elseif CursorGlow.db.profile.lowFPSFallback == "lowcpu" then
+                CursorGlow:SetLowCPUModeActive(false)
+            end
+        end
+    end
+end
+
+function CursorGlow:StartFPSTimer()
+    if fpsTimer then fpsTimer:Cancel() end
+    fpsTimer = C_Timer.NewTicker(0.5, CheckLowFPS)
+end
+
+function CursorGlow:DisableAddonTemporarily(reason)
+    frame:Hide()
+    CursorGlow._tempDisabled = reason
+end
+
+function CursorGlow:EnableAddonAfterTemp()
+    frame:Show()
+    CursorGlow._tempDisabled = nil
+end
+
+function CursorGlow:SetLowCPUModeActive(enable)
+    CursorGlow._lowCPUActive = enable
+    CursorGlow:ApplySettings()
+end
 
 function CursorGlow:DisableTailEffect()
     if CursorGlow.db.profile.enableTail then
