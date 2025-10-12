@@ -754,15 +754,7 @@ local options = {
                         CursorGlow.db.profile.lowCPUTailLength = val
                     end,
                     disabled = function() return not CursorGlow.db.profile.lowCPUMode end,
-                },
-                autoDisableRaid = {
-                    type = 'toggle',
-                    name = "Auto-disable in Raid/Party",
-                    desc = "Disable CursorGlow in raids, parties, or battlegrounds.",
-                    order = 4,
-                    get = function() return CursorGlow.db.profile.autoDisableRaid end,
-                    set = function(_, val) CursorGlow.db.profile.autoDisableRaid = val end,
-                },
+                },              
                 autoDisableLowFPS = {
                     type = 'toggle',
                     name = "Auto-disable on Low FPS",
@@ -776,7 +768,7 @@ local options = {
                     name = "Low FPS Threshold",
                     desc = "FPS threshold for auto-disable.",
                     order = 6,
-                    min = 10, max = 60, step = 1,
+                    min = 10, max = 120, step = 1,
                     get = function() return CursorGlow.db.profile.lowFPSThreshold or 20 end,
                     set = function(_, val) CursorGlow.db.profile.lowFPSThreshold = val end,
                     disabled = function() return not CursorGlow.db.profile.autoDisableLowFPS end,
@@ -796,64 +788,6 @@ local options = {
     },
 }
 
-local function IsInLargeGroup()
-    return IsInRaid() or IsInGroup() or IsInBattlefield() -- WoW API
-end
-
-local function CheckRaidPartyDisable()
-    if CursorGlow.db.profile.autoDisableRaid and IsInLargeGroup() then
-        CursorGlow:DisableAddonTemporarily("raid")
-    elseif CursorGlow._tempDisabled == "raid" then
-        CursorGlow:EnableAddonAfterTemp()
-    end
-end
-
--- Init
-function CursorGlow:OnInitialize()
-    self.db       = AceDB:New("CursorGlowDB", profileDefaults)
-    self.dbChar   = AceDB:New("CursorGlowCharDB", charDefaults)
-    self.dbGlobal = AceDB:New("CursorGlowGlobalDB", globalDefaults)
-
-    self.db.RegisterCallback(self, "OnProfileChanged", "OnProfileChanged")
-    self.db.RegisterCallback(self, "OnProfileCopied", "OnProfileChanged")
-    self.db.RegisterCallback(self, "OnProfileReset", "OnProfileChanged")
-
-    if self.dbGlobal.global.profileEnabled then
-        self.db:SetProfile("Global")
-    elseif self.dbChar.char.lastSelectedProfile then
-        self.db:SetProfile(self.dbChar.char.lastSelectedProfile)
-    else
-        local characterProfileName = UnitName("player") .. " - " .. GetRealmName()
-        self.db:SetProfile(characterProfileName)
-    end
-
-    self:ApplySettings()
-	self:StartFPSTimer()
-    CheckRaidPartyDisable()
-
-    if minimapButton and icon then
-        icon:Register("CursorGlow", minimapButton, self.db.profile.minimap)
-    else
-        DEFAULT_CHAT_FRAME:AddMessage("CursorGlow: Error initializing minimap button or LibDBIcon.")
-    end
-    if self.db.profile.minimap and self.db.profile.minimap.hide then icon:Hide("CursorGlow") else icon:Show("CursorGlow") end
-
-    AceConfig:RegisterOptionsTable("CursorGlow", options)
-    AceConfigDialog:AddToBlizOptions("CursorGlow", "CursorGlow")
-    local profilesOptions = AceDBOptions:GetOptionsTable(self.db)
-    AceConfig:RegisterOptionsTable("CursorGlow Profiles", profilesOptions)
-    AceConfigDialog:AddToBlizOptions("CursorGlow Profiles", "Profiles", "CursorGlow")
-end
-
--- Events
-frame:RegisterEvent("PLAYER_REGEN_DISABLED")
-frame:RegisterEvent("PLAYER_REGEN_ENABLED")
-frame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
-frame:RegisterEvent("PLAYER_ENTERING_WORLD")
-
-frame:RegisterEvent("GROUP_ROSTER_UPDATE")
-frame:RegisterEvent("PLAYER_ENTERING_WORLD")
-
 local fpsTimer
 local function CheckLowFPS()
     if CursorGlow.db.profile.autoDisableLowFPS then
@@ -865,6 +799,7 @@ local function CheckLowFPS()
                 CursorGlow:SetLowCPUModeActive(true)
             end
         else
+            -- If FPS recovers, re-enable
             if CursorGlow._tempDisabled == "fps" then
                 CursorGlow:EnableAddonAfterTemp()
             elseif CursorGlow.db.profile.lowFPSFallback == "lowcpu" then
@@ -893,6 +828,52 @@ function CursorGlow:SetLowCPUModeActive(enable)
     CursorGlow._lowCPUActive = enable
     CursorGlow:ApplySettings()
 end
+
+
+-- Now define CursorGlow:OnInitialize BELOW these functions!
+function CursorGlow:OnInitialize()
+    self.db       = AceDB:New("CursorGlowDB", profileDefaults)
+    self.dbChar   = AceDB:New("CursorGlowCharDB", charDefaults)
+    self.dbGlobal = AceDB:New("CursorGlowGlobalDB", globalDefaults)
+
+    self.db.RegisterCallback(self, "OnProfileChanged", "OnProfileChanged")
+    self.db.RegisterCallback(self, "OnProfileCopied", "OnProfileChanged")
+    self.db.RegisterCallback(self, "OnProfileReset", "OnProfileChanged")
+
+    if self.dbGlobal.global.profileEnabled then
+        self.db:SetProfile("Global")
+    elseif self.dbChar.char.lastSelectedProfile then
+        self.db:SetProfile(self.dbChar.char.lastSelectedProfile)
+    else
+        local characterProfileName = UnitName("player") .. " - " .. GetRealmName()
+        self.db:SetProfile(characterProfileName)
+    end
+
+    self:ApplySettings()
+    self:StartFPSTimer()
+    
+    if minimapButton and icon then
+        icon:Register("CursorGlow", minimapButton, self.db.profile.minimap)
+    else
+        DEFAULT_CHAT_FRAME:AddMessage("CursorGlow: Error initializing minimap button or LibDBIcon.")
+    end
+    if self.db.profile.minimap and self.db.profile.minimap.hide then icon:Hide("CursorGlow") else icon:Show("CursorGlow") end
+
+    AceConfig:RegisterOptionsTable("CursorGlow", options)
+    AceConfigDialog:AddToBlizOptions("CursorGlow", "CursorGlow")
+    local profilesOptions = AceDBOptions:GetOptionsTable(self.db)
+    AceConfig:RegisterOptionsTable("CursorGlow Profiles", profilesOptions)
+    AceConfigDialog:AddToBlizOptions("CursorGlow Profiles", "Profiles", "CursorGlow")
+end
+
+-- Events
+frame:RegisterEvent("PLAYER_REGEN_DISABLED")
+frame:RegisterEvent("PLAYER_REGEN_ENABLED")
+frame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
+frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+
+frame:RegisterEvent("GROUP_ROSTER_UPDATE")
+frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 
 function CursorGlow:DisableTailEffect()
     if CursorGlow.db.profile.enableTail then
