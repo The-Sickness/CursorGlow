@@ -183,8 +183,10 @@ end
 local function SpawnIdleSparkle(cursorX, cursorY)
     local profile = CursorGlow.db and CursorGlow.db.profile
     if not profile then return end
-    local poolCount = profile.stationarySparklePoolCount or idleSparklePoolSize
-    local sizeMax = profile.stationarySparkleSizeMax or 14
+
+    local poolCount = tonumber(profile.stationarySparklePoolCount) or idleSparklePoolSize
+    if poolCount < 1 then poolCount = idleSparklePoolSize end
+    local sizeMax = tonumber(profile.stationarySparkleSizeMax) or 14
     CreateIdleSparklePool(poolCount, sizeMax)
 
     local scale = UIParent:GetEffectiveScale()
@@ -192,30 +194,49 @@ local function SpawnIdleSparkle(cursorX, cursorY)
     idleSparkleIndex = (idleSparkleIndex % poolCount) + 1
     if not f then return end
 
-    local offset = profile.stationarySparkleOffset or 10
-    local rx = math.random(-offset, offset)
-    local ry = math.random(-offset, offset)
-    local size = math.random(profile.stationarySparkleSizeMin or 6, profile.stationarySparkleSizeMax or 14)
+    -- sanitize numeric inputs
+    local offset = tonumber(profile.stationarySparkleOffset) or 10
+    if offset < 0 then offset = 0 end
+
+    -- safe random offset (float) so we never call math.random(a,b) with bad args
+    local rx = (math.random() * 2 - 1) * offset
+    local ry = (math.random() * 2 - 1) * offset
+
+    -- size range: ensure min/max are numbers and min <= max
+    local minS = tonumber(profile.stationarySparkleSizeMin) or 6
+    local maxS = tonumber(profile.stationarySparkleSizeMax) or 14
+    if minS > maxS then minS, maxS = maxS, minS end
+
+    local size
+    if maxS == minS then
+        size = minS
+    else
+        size = minS + math.random() * (maxS - minS)
+    end
 
     f:SetPoint("CENTER", UIParent, "BOTTOMLEFT", (cursorX + rx) / scale, (cursorY + ry) / scale)
     f:SetSize(size, size)
 
     -- prefer sparkle-specific color, fallback to main profile color
-    local rr, gg, bb = 1,1,1
+    local rr, gg, bb = 1, 1, 1
     if profile.stationarySparkleColor and type(profile.stationarySparkleColor) == "table" then
         rr, gg, bb = profile.stationarySparkleColor[1] or 1, profile.stationarySparkleColor[2] or 1, profile.stationarySparkleColor[3] or 1
     else
         local c = profile.color
-        if type(c) == "table" then rr, gg, bb = c[1] or 1, c[2] or 1, c[3] or 1
-        elseif type(c) == "string" then local m = colorOptions[c] or {1,1,1}; rr,gg,bb = m[1], m[2], m[3] end
+        if type(c) == "table" then
+            rr, gg, bb = c[1] or 1, c[2] or 1, c[3] or 1
+        elseif type(c) == "string" then
+            local m = colorOptions[c] or {1,1,1}
+            rr, gg, bb = m[1], m[2], m[3]
+        end
     end
 
-    local a = profile.opacity or 1
+    local a = tonumber(profile.opacity) or 1
     f.texture:SetVertexColor(rr, gg, bb, a)
     f:SetAlpha(1)
     f:Show()
 
-    local life = profile.stationarySparkleLifetime or 0.8
+    local life = tonumber(profile.stationarySparkleLifetime) or 0.8
     local elapsed = 0
     f:SetScript("OnUpdate", function(self, dt)
         elapsed = elapsed + dt
