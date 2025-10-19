@@ -1,6 +1,7 @@
 -- CursorGlow
 -- Made by Sharpedge_Gaming
 -- v6.4
+-- Modified by The-Sickness: added stationary sparkles, color picker, dimming, color-blind support, and defensive checks.
 
 local LibStub = LibStub or _G.LibStub
 local AceDB            = LibStub:GetLibrary("AceDB-3.0")
@@ -124,21 +125,21 @@ local function CreateExplosionParticles(textureKey, size)
     end
 end
 
--- Idle/stationary sparkles (new)
+-- Idle/stationary sparkles 
 local idleSparkles = {}
 local idleSparklePoolSize = 24
 local idleSparkleIndex = 1
 local idleSparkleAcc = 0
 
 local function CreateIdleSparklePool(poolCount, size)
-    poolCount = poolCount or idleSparklePoolSize
-    size = size or 14
+    poolCount = tonumber(poolCount) or idleSparklePoolSize
+    if poolCount < 1 then poolCount = idleSparklePoolSize end
+    size = tonumber(size) or 14
+
     for i = 1, poolCount do
         if not idleSparkles[i] then
             local f = CreateFrame("Frame", nil, UIParent)
-            -- keep same strata as main frame but put sparkle frames above by frame level
             f:SetFrameStrata("TOOLTIP")
-            -- ensure we are above the base frame by bumping frame level
             f:SetFrameLevel((frame:GetFrameLevel() or 0) + 10)
             f:SetSize(size, size)
             local tex = f:CreateTexture(nil, "ARTWORK")
@@ -154,10 +155,42 @@ local function CreateIdleSparklePool(poolCount, size)
     local texKey = (CursorGlow.db and CursorGlow.db.profile and CursorGlow.db.profile.stationarySparkleTexture) or "ring11"
     local path = textureOptions[texKey] or textureOptions["ring11"]
     local profile = CursorGlow.db and CursorGlow.db.profile
+
     local cr, cg, cb = 1,1,1
-    if profile and profile.stationarySparkleColor then
-        local c = profile.stationarySparkleColor
-        if type(c) == "table" then cr, cg, cb = c[1] or 1, c[2] or 1, c[3] or 1 end
+    if profile and profile.stationarySparkleColor and type(profile.stationarySparkleColor) == "table" then
+        cr, cg, cb = profile.stationarySparkleColor[1] or 1, profile.stationarySparkleColor[2] or 1, profile.stationarySparkleColor[3] or 1
+    else
+        if profile then
+            local c = profile.color
+            if type(c) == "table" then cr, cg, cb = c[1] or 1, c[2] or 1, c[3] or 1
+            elseif type(c) == "string" then local m = colorOptions[c] or {1,1,1}; cr,cg,cb = m[1],m[2],m[3] end
+        end
+    end
+
+    -- Apply colorblind transform if enabled
+    if CursorGlow.db and CursorGlow.db.profile and CursorGlow.db.profile.colorblindEnabled then
+        local mode = CursorGlow.db.profile.colorblindMode or "none"
+        local function _apply(r,g,b) return r,g,b end
+        if mode == "achromatopsia" then
+            local l = 0.299 * cr + 0.587 * cg + 0.114 * cb
+            cr, cg, cb = l, l, l
+        elseif mode == "highcontrast" then
+            local lum = 0.2126 * cr + 0.7152 * cg + 0.0722 * cb
+            local t = CursorGlow.db.profile.colorblindHighContrastThreshold or 0.5
+            if lum < t then
+                local c = CursorGlow.db.profile.colorblindHighContrastDark or {0,0,0}
+                cr, cg, cb = c[1] or 0, c[2] or 0, c[3] or 0
+            else
+                local c = CursorGlow.db.profile.colorblindHighContrastLight or {1,1,0}
+                cr, cg, cb = c[1] or 1, c[2] or 1, c[3] or 0
+            end
+        elseif mode == "protanopia" then
+            cr, cg, cb = 0.567 * cr + 0.433 * cg + 0.0 * cb, 0.558 * cr + 0.442 * cg + 0.0 * cb, 0.0 * cr + 0.242 * cg + 0.758 * cb
+        elseif mode == "deuteranopia" then
+            cr, cg, cb = 0.625 * cr + 0.375 * cg + 0.0 * cb, 0.7 * cr + 0.3 * cg + 0.0 * cb, 0.0 * cr + 0.3 * cg + 0.7 * cb
+        elseif mode == "tritanopia" then
+            cr, cg, cb = 0.95 * cr + 0.05 * cg + 0.0 * cb, 0.0 * cr + 0.433 * cg + 0.567 * cb, 0.0 * cr + 0.475 * cg + 0.525 * cb
+        end
     end
 
     for i = 1, poolCount do
@@ -180,80 +213,6 @@ local function ClearIdleSparkles()
     idleSparkleIndex = 1
 end
 
-local function SpawnIdleSparkle(cursorX, cursorY)
-    local profile = CursorGlow.db and CursorGlow.db.profile
-    if not profile then return end
-
-    local poolCount = tonumber(profile.stationarySparklePoolCount) or idleSparklePoolSize
-    if poolCount < 1 then poolCount = idleSparklePoolSize end
-    local sizeMax = tonumber(profile.stationarySparkleSizeMax) or 14
-    CreateIdleSparklePool(poolCount, sizeMax)
-
-    local scale = UIParent:GetEffectiveScale()
-    local f = idleSparkles[idleSparkleIndex]
-    idleSparkleIndex = (idleSparkleIndex % poolCount) + 1
-    if not f then return end
-
-    -- sanitize numeric inputs
-    local offset = tonumber(profile.stationarySparkleOffset) or 10
-    if offset < 0 then offset = 0 end
-
-    -- safe random offset (float) so we never call math.random(a,b) with bad args
-    local rx = (math.random() * 2 - 1) * offset
-    local ry = (math.random() * 2 - 1) * offset
-
-    -- size range: ensure min/max are numbers and min <= max
-    local minS = tonumber(profile.stationarySparkleSizeMin) or 6
-    local maxS = tonumber(profile.stationarySparkleSizeMax) or 14
-    if minS > maxS then minS, maxS = maxS, minS end
-
-    local size
-    if maxS == minS then
-        size = minS
-    else
-        size = minS + math.random() * (maxS - minS)
-    end
-
-    f:SetPoint("CENTER", UIParent, "BOTTOMLEFT", (cursorX + rx) / scale, (cursorY + ry) / scale)
-    f:SetSize(size, size)
-
-    -- prefer sparkle-specific color, fallback to main profile color
-    local rr, gg, bb = 1, 1, 1
-    if profile.stationarySparkleColor and type(profile.stationarySparkleColor) == "table" then
-        rr, gg, bb = profile.stationarySparkleColor[1] or 1, profile.stationarySparkleColor[2] or 1, profile.stationarySparkleColor[3] or 1
-    else
-        local c = profile.color
-        if type(c) == "table" then
-            rr, gg, bb = c[1] or 1, c[2] or 1, c[3] or 1
-        elseif type(c) == "string" then
-            local m = colorOptions[c] or {1,1,1}
-            rr, gg, bb = m[1], m[2], m[3]
-        end
-    end
-
-    local a = tonumber(profile.opacity) or 1
-    f.texture:SetVertexColor(rr, gg, bb, a)
-    f:SetAlpha(1)
-    f:Show()
-
-    local life = tonumber(profile.stationarySparkleLifetime) or 0.8
-    local elapsed = 0
-    f:SetScript("OnUpdate", function(self, dt)
-        elapsed = elapsed + dt
-        local t = elapsed / life
-        if t >= 1 then
-            self:Hide()
-            self:SetScript("OnUpdate", nil)
-            return
-        end
-        -- fade and slight scale/pop
-        local alpha = 1 - t
-        local scaleUp = 1 + 0.2 * t
-        self:SetAlpha(alpha * a)
-        self:SetSize(size * scaleUp, size * scaleUp)
-    end)
-end
-
 -- Helpers
 local function GetDefaultClassColor()
     local _, class = UnitClass("player")
@@ -264,7 +223,7 @@ local function GetDefaultClassColor()
     return {1,1,1}
 end
 
--- New: read color as RGB (supports table {r,g,b} and migrates old string keys)
+-- Read color as RGB (supports table {r,g,b} and migrates old string keys)
 local function GetActiveColor()
     local c = CursorGlow.db and CursorGlow.db.profile and CursorGlow.db.profile.color
     if type(c) == "table" then
@@ -277,8 +236,62 @@ local function GetActiveColor()
     end
 end
 
+-- COLORBLIND SUPPORT helpers
+local function ApplyColorblindTransform(r, g, b, mode)
+    if not mode or mode == "none" then return r, g, b end
+
+    if mode == "achromatopsia" then
+        local l = 0.299 * r + 0.587 * g + 0.114 * b
+        return l, l, l
+    end
+
+    if mode == "highcontrast" then
+        local lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
+        local t = CursorGlow.db and CursorGlow.db.profile and CursorGlow.db.profile.colorblindHighContrastThreshold or 0.5
+        if lum < t then
+            local c = CursorGlow.db.profile.colorblindHighContrastDark or {0,0,0}
+            return c[1] or 0, c[2] or 0, c[3] or 0
+        else
+            local c = CursorGlow.db.profile.colorblindHighContrastLight or {1,1,0}
+            return c[1] or 1, c[2] or 1, c[3] or 0
+        end
+    end
+
+    if mode == "protanopia" then
+        local rr = 0.567 * r + 0.433 * g + 0.0 * b
+        local gg = 0.558 * r + 0.442 * g + 0.0 * b
+        local bb = 0.0   * r + 0.242 * g + 0.758 * b
+        return rr, gg, bb
+    end
+
+    if mode == "deuteranopia" then
+        local rr = 0.625 * r + 0.375 * g + 0.0 * b
+        local gg = 0.7   * r + 0.3   * g + 0.0 * b
+        local bb = 0.0   * r + 0.3   * g + 0.7 * b
+        return rr, gg, bb
+    end
+
+    if mode == "tritanopia" then
+        local rr = 0.95  * r + 0.05  * g + 0.0   * b
+        local gg = 0.0   * r + 0.433 * g + 0.567 * b
+        local bb = 0.0   * r + 0.475 * g + 0.525 * b
+        return rr, gg, bb
+    end
+
+    return r, g, b
+end
+
+local function GetActiveColorForMode()
+    local r, g, b = GetActiveColor()
+    if CursorGlow.db and CursorGlow.db.profile and CursorGlow.db.profile.colorblindEnabled then
+        local mode = CursorGlow.db.profile.colorblindMode or "none"
+        return ApplyColorblindTransform(r, g, b, mode)
+    end
+    return r, g, b
+end
+
 local function UpdateTextureColor()
-    local r,g,b = GetActiveColor()
+    local r,g,b = GetActiveColorForMode()
     local a = CursorGlow.db.profile.opacity or 1
     texture:SetVertexColor(r, g, b, a)
     for _, tailGroup in pairs(tailTextures) do
@@ -327,7 +340,7 @@ local function InitializeTailTextures()
     wipe(tailPositions)
 
     local numTails = CursorGlow.db.profile.numTails or 1
-    local r,g,b = GetActiveColor()
+    local r,g,b = GetActiveColorForMode()
     local a = CursorGlow.db.profile.opacity or 1
     local path = textureOptions[CursorGlow.db.profile.texture] or textureOptions["ring14"]
 
@@ -459,7 +472,7 @@ local profileDefaults = {
         autoDisableLowFPS = false,
         lowFPSThreshold = 20,
         lowFPSFallback = "disable", -- "disable" or "lowcpu"
-        -- Stationary sparkles settings (new)
+        -- Stationary sparkles settings
         stationarySparkleEnabled = false,
         stationarySparkleInterval = 0.15,
         stationarySparklesPerTick = 1,
@@ -469,10 +482,16 @@ local profileDefaults = {
         stationarySparkleOffset = 10,
         stationarySparkleLifetime = 0.8,
         stationarySparkleTexture = "ring11",
-        stationarySparkleColor = {1,1,1},         -- RGB for sparkles (new color picker)
+        stationarySparkleColor = {1,1,1},         -- RGB for sparkles
         stationarySparkleDimMain = true,          -- when true, dim main texture while sparkles are shown
-        stationarySparkleMainAlpha = 0.6,         -- dim multiplier for main texture (0..1),
-		
+        stationarySparkleMainAlpha = 0.6,         -- dim multiplier for main texture (0..1)
+
+        -- Colorblind / accessibility defaults
+        colorblindEnabled = false,
+        colorblindMode = "none", -- "none", "protanopia", "deuteranopia", "tritanopia", "achromatopsia", "highcontrast"
+        colorblindHighContrastThreshold = 0.5,
+        colorblindHighContrastDark = {0,0,0},
+        colorblindHighContrastLight = {1,1,0},
     }
 }
 local globalDefaults = { global = { profileEnabled = false } }
@@ -514,6 +533,16 @@ function CursorGlow:ApplySettings()
     profile.stationarySparkleOffset = profile.stationarySparkleOffset or 10
     profile.stationarySparkleLifetime = profile.stationarySparkleLifetime or 0.8
     profile.stationarySparkleTexture = profile.stationarySparkleTexture or "ring11"
+    profile.stationarySparkleColor = profile.stationarySparkleColor or {1,1,1}
+    if profile.stationarySparkleDimMain == nil then profile.stationarySparkleDimMain = true end
+    profile.stationarySparkleMainAlpha = profile.stationarySparkleMainAlpha or 0.6
+
+    -- colorblind defaults
+    profile.colorblindEnabled = profile.colorblindEnabled or false
+    profile.colorblindMode = profile.colorblindMode or "none"
+    profile.colorblindHighContrastThreshold = profile.colorblindHighContrastThreshold or 0.5
+    profile.colorblindHighContrastDark = profile.colorblindHighContrastDark or {0,0,0}
+    profile.colorblindHighContrastLight = profile.colorblindHighContrastLight or {1,1,0}
 
     -- Respect low CPU mode
     if profile.lowCPUMode or CursorGlow._lowCPUActive then
@@ -532,6 +561,13 @@ function CursorGlow:ApplySettings()
     UpdateAddonVisibility()
     CursorGlow.tailLength = self.tailLength
     InitializeTailTextures()
+
+    -- initialize or clear sparkle pool based on enabled setting
+    if profile.stationarySparkleEnabled then
+        CreateIdleSparklePool(profile.stationarySparklePoolCount or idleSparklePoolSize, profile.stationarySparkleSizeMax or 14)
+    else
+        ClearIdleSparkles()
+    end
 
     if profile.minimap.hide then icon:Hide("CursorGlow") else icon:Show("CursorGlow") end
 
@@ -866,100 +902,131 @@ local options = {
                 },
             },
         },
-stationaryHeader = { type='header', name="Stationary Sparkles", order=45 },
-stationarySparkles = {
-    type='group', name="Stationary Sparkles", order=46, inline=true,
-    args = {
-        stationarySparkleEnabled = {
-            type='toggle', name="Enable Sparkles While Idle", order=1,
-            desc = "Emit small sparkles while the cursor is stationary.",
-            get = function() return CursorGlow.db.profile.stationarySparkleEnabled end,
-            set = function(_, val)
-                CursorGlow.db.profile.stationarySparkleEnabled = val
-                CursorGlow:ApplySettings()
-            end,
+
+        -- Accessibility / colorblind options
+        accessibilityHeader = { type='header', name="Accessibility", order=42 },
+        accessibility = {
+            type='group', name="Accessibility", order=43, inline=true,
+            args = {
+                colorblindEnabled = {
+                    type='toggle', name="Enable Colorblind Mode", order=1,
+                    desc = "Apply colorblind-friendly color mappings to cursor and sparkles.",
+                    get = function() return CursorGlow.db.profile.colorblindEnabled end,
+                    set = function(_, v) CursorGlow.db.profile.colorblindEnabled = v; CursorGlow:ApplySettings() end,
+                },
+                colorblindMode = {
+                    type='select', name="Colorblind Mode", order=2,
+                    desc="Choose a colorblind mapping preset.",
+                    values = { none="None", protanopia="Protanopia (red-weak)", deuteranopia="Deuteranopia (green-weak)", tritanopia="Tritanopia (blue-weak)", achromatopsia="Achromatopsia (grayscale)", highcontrast="High Contrast" },
+                    get = function() return CursorGlow.db.profile.colorblindMode end,
+                    set = function(_, v) CursorGlow.db.profile.colorblindMode = v; CursorGlow:ApplySettings() end,
+                    disabled = function() return not CursorGlow.db.profile.colorblindEnabled end,
+                },
+                colorblindHighContrastThreshold = {
+                    type='range', name="High-Contrast Threshold", order=3, min=0, max=1, step=0.01,
+                    get = function() return CursorGlow.db.profile.colorblindHighContrastThreshold end,
+                    set = function(_, v) CursorGlow.db.profile.colorblindHighContrastThreshold = v end,
+                    disabled = function() return not (CursorGlow.db.profile.colorblindEnabled and CursorGlow.db.profile.colorblindMode == "highcontrast") end,
+                },
+            },
         },
-        stationarySparkleColor = {
-            type='color', name="Sparkle Color", order=2,
-            desc = "Color used for stationary sparkles (RGB).",
-            get = function()
-                local c = CursorGlow.db.profile.stationarySparkleColor or {1,1,1}
-                return c[1], c[2], c[3]
-            end,
-            set = function(_, r,g,b)
-                CursorGlow.db.profile.stationarySparkleColor = {r,g,b}
-                CursorGlow:ApplySettings()
-            end,
-            disabled = function() return not CursorGlow.db.profile.stationarySparkleEnabled end,
+
+        -- Stationary sparkles options
+        stationaryHeader = { type='header', name="Stationary Sparkles", order=45 },
+        stationarySparkles = {
+            type='group', name="Stationary Sparkles", order=46, inline=true,
+            args = {
+                stationarySparkleEnabled = {
+                    type='toggle', name="Enable Sparkles While Idle", order=1,
+                    desc = "Emit small sparkles while the cursor is stationary.",
+                    get = function() return CursorGlow.db.profile.stationarySparkleEnabled end,
+                    set = function(_, val)
+                        CursorGlow.db.profile.stationarySparkleEnabled = val
+                        CursorGlow:ApplySettings()
+                    end,
+                },
+                stationarySparkleColor = {
+                    type='color', name="Sparkle Color", order=2,
+                    desc = "Color used for stationary sparkles (RGB).",
+                    get = function()
+                        local c = CursorGlow.db.profile.stationarySparkleColor or {1,1,1}
+                        return c[1], c[2], c[3]
+                    end,
+                    set = function(_, r,g,b)
+                        CursorGlow.db.profile.stationarySparkleColor = {r,g,b}
+                        CursorGlow:ApplySettings()
+                    end,
+                    disabled = function() return not CursorGlow.db.profile.stationarySparkleEnabled end,
+                },
+                stationarySparkleInterval = {
+                    type='range', name="Sparkle Interval (s)", order=3, min=0.02, max=1, step=0.01,
+                    desc = "Seconds between sparkle emission ticks while stationary.",
+                    get = function() return CursorGlow.db.profile.stationarySparkleInterval end,
+                    set = function(_, v) CursorGlow.db.profile.stationarySparkleInterval = v end,
+                    disabled = function() return not CursorGlow.db.profile.stationarySparkleEnabled end,
+                },
+                stationarySparklesPerTick = {
+                    type='range', name="Sparkles Per Tick", order=4, min=1, max=6, step=1,
+                    desc = "How many sparkles to spawn each tick.",
+                    get = function() return CursorGlow.db.profile.stationarySparklesPerTick end,
+                    set = function(_, v) CursorGlow.db.profile.stationarySparklesPerTick = v end,
+                    disabled = function() return not CursorGlow.db.profile.stationarySparkleEnabled end,
+                },
+                stationarySparklePoolCount = {
+                    type='range', name="Pool Size", order=5, min=6, max=128, step=1,
+                    desc = "Number of sparkle frames to keep in the pool (performance / density).",
+                    get = function() return CursorGlow.db.profile.stationarySparklePoolCount end,
+                    set = function(_, v) CursorGlow.db.profile.stationarySparklePoolCount = v; CursorGlow:ApplySettings() end,
+                    disabled = function() return not CursorGlow.db.profile.stationarySparkleEnabled end,
+                },
+                stationarySparkleSizeMin = {
+                    type='range', name="Min Size (px)", order=6, min=2, max=64, step=1,
+                    get = function() return CursorGlow.db.profile.stationarySparkleSizeMin end,
+                    set = function(_, v) CursorGlow.db.profile.stationarySparkleSizeMin = v end,
+                    disabled = function() return not CursorGlow.db.profile.stationarySparkleEnabled end,
+                },
+                stationarySparkleSizeMax = {
+                    type='range', name="Max Size (px)", order=7, min=2, max=128, step=1,
+                    get = function() return CursorGlow.db.profile.stationarySparkleSizeMax end,
+                    set = function(_, v) CursorGlow.db.profile.stationarySparkleSizeMax = v; CursorGlow:ApplySettings() end,
+                    disabled = function() return not CursorGlow.db.profile.stationarySparkleEnabled end,
+                },
+                stationarySparkleOffset = {
+                    type='range', name="Offset (px)", order=8, min=0, max=64, step=1,
+                    desc = "Max random offset from the cursor center for each sparkle.",
+                    get = function() return CursorGlow.db.profile.stationarySparkleOffset end,
+                    set = function(_, v) CursorGlow.db.profile.stationarySparkleOffset = v end,
+                    disabled = function() return not CursorGlow.db.profile.stationarySparkleEnabled end,
+                },
+                stationarySparkleLifetime = {
+                    type='range', name="Lifetime (s)", order=9, min=0.05, max=5, step=0.05,
+                    get = function() return CursorGlow.db.profile.stationarySparkleLifetime end,
+                    set = function(_, v) CursorGlow.db.profile.stationarySparkleLifetime = v end,
+                    disabled = function() return not CursorGlow.db.profile.stationarySparkleEnabled end,
+                },
+                stationarySparkleTexture = {
+                    type='select', name="Sparkle Texture", order=10, values = valuesTextures,
+                    get = function() return CursorGlow.db.profile.stationarySparkleTexture end,
+                    set = function(_, v) CursorGlow.db.profile.stationarySparkleTexture = v; CursorGlow:ApplySettings() end,
+                    disabled = function() return not CursorGlow.db.profile.stationarySparkleEnabled end,
+                },
+                stationarySparkleDimMain = {
+                    type='toggle', name="Dim Main Texture While Sparkling", order=11,
+                    desc = "Reduce the main cursor texture alpha while stationary sparkles are active.",
+                    get = function() return CursorGlow.db.profile.stationarySparkleDimMain end,
+                    set = function(_, v) CursorGlow.db.profile.stationarySparkleDimMain = v; CursorGlow:ApplySettings() end,
+                    disabled = function() return not CursorGlow.db.profile.stationarySparkleEnabled end,
+                },
+                stationarySparkleMainAlpha = {
+                    type='range', name="Main Texture Alpha (multiplier)", order=12, min=0, max=1, step=0.01,
+                    desc = "When dimming is enabled, the main texture alpha is multiplied by this value.",
+                    get = function() return CursorGlow.db.profile.stationarySparkleMainAlpha end,
+                    set = function(_, v) CursorGlow.db.profile.stationarySparkleMainAlpha = v end,
+                    disabled = function() return not (CursorGlow.db.profile.stationarySparkleEnabled and CursorGlow.db.profile.stationarySparkleDimMain) end,
+                },
+            },
         },
-        stationarySparkleInterval = {
-            type='range', name="Sparkle Interval (s)", order=3, min=0.02, max=1, step=0.01,
-            desc = "Seconds between sparkle emission ticks while stationary.",
-            get = function() return CursorGlow.db.profile.stationarySparkleInterval end,
-            set = function(_, v) CursorGlow.db.profile.stationarySparkleInterval = v end,
-            disabled = function() return not CursorGlow.db.profile.stationarySparkleEnabled end,
-        },
-        stationarySparklesPerTick = {
-            type='range', name="Sparkles Per Tick", order=4, min=1, max=6, step=1,
-            desc = "How many sparkles to spawn each tick.",
-            get = function() return CursorGlow.db.profile.stationarySparklesPerTick end,
-            set = function(_, v) CursorGlow.db.profile.stationarySparklesPerTick = v end,
-            disabled = function() return not CursorGlow.db.profile.stationarySparkleEnabled end,
-        },
-        stationarySparklePoolCount = {
-            type='range', name="Pool Size", order=5, min=6, max=128, step=1,
-            desc = "Number of sparkle frames to keep in the pool (performance / density).",
-            get = function() return CursorGlow.db.profile.stationarySparklePoolCount end,
-            set = function(_, v) CursorGlow.db.profile.stationarySparklePoolCount = v; CursorGlow:ApplySettings() end,
-            disabled = function() return not CursorGlow.db.profile.stationarySparkleEnabled end,
-        },
-        stationarySparkleSizeMin = {
-            type='range', name="Min Size (px)", order=6, min=2, max=64, step=1,
-            get = function() return CursorGlow.db.profile.stationarySparkleSizeMin end,
-            set = function(_, v) CursorGlow.db.profile.stationarySparkleSizeMin = v end,
-            disabled = function() return not CursorGlow.db.profile.stationarySparkleEnabled end,
-        },
-        stationarySparkleSizeMax = {
-            type='range', name="Max Size (px)", order=7, min=2, max=128, step=1,
-            get = function() return CursorGlow.db.profile.stationarySparkleSizeMax end,
-            set = function(_, v) CursorGlow.db.profile.stationarySparkleSizeMax = v; CursorGlow:ApplySettings() end,
-            disabled = function() return not CursorGlow.db.profile.stationarySparkleEnabled end,
-        },
-        stationarySparkleOffset = {
-            type='range', name="Offset (px)", order=8, min=0, max=64, step=1,
-            desc = "Max random offset from the cursor center for each sparkle.",
-            get = function() return CursorGlow.db.profile.stationarySparkleOffset end,
-            set = function(_, v) CursorGlow.db.profile.stationarySparkleOffset = v end,
-            disabled = function() return not CursorGlow.db.profile.stationarySparkleEnabled end,
-        },
-        stationarySparkleLifetime = {
-            type='range', name="Lifetime (s)", order=9, min=0.05, max=5, step=0.05,
-            get = function() return CursorGlow.db.profile.stationarySparkleLifetime end,
-            set = function(_, v) CursorGlow.db.profile.stationarySparkleLifetime = v end,
-            disabled = function() return not CursorGlow.db.profile.stationarySparkleEnabled end,
-        },
-        stationarySparkleTexture = {
-            type='select', name="Sparkle Texture", order=10, values = valuesTextures,
-            get = function() return CursorGlow.db.profile.stationarySparkleTexture end,
-            set = function(_, v) CursorGlow.db.profile.stationarySparkleTexture = v; CursorGlow:ApplySettings() end,
-            disabled = function() return not CursorGlow.db.profile.stationarySparkleEnabled end,
-        },
-        stationarySparkleDimMain = {
-            type='toggle', name="Dim Main Texture While Sparkling", order=11,
-            desc = "Reduce the main cursor texture alpha while stationary sparkles are active.",
-            get = function() return CursorGlow.db.profile.stationarySparkleDimMain end,
-            set = function(_, v) CursorGlow.db.profile.stationarySparkleDimMain = v; CursorGlow:ApplySettings() end,
-            disabled = function() return not CursorGlow.db.profile.stationarySparkleEnabled end,
-        },
-        stationarySparkleMainAlpha = {
-            type='range', name="Main Texture Alpha (multiplier)", order=12, min=0, max=1, step=0.01,
-            desc = "When dimming is enabled, the main texture alpha is multiplied by this value.",
-            get = function() return CursorGlow.db.profile.stationarySparkleMainAlpha end,
-            set = function(_, v) CursorGlow.db.profile.stationarySparkleMainAlpha = v end,
-            disabled = function() return not (CursorGlow.db.profile.stationarySparkleEnabled and CursorGlow.db.profile.stationarySparkleDimMain) end,
-        },
-    },
-},
+
         performanceHeader = { type = 'header', name = "Performance & Compatibility", order = 50 },
         performance = {
             type = 'group',
@@ -1001,7 +1068,7 @@ stationarySparkles = {
                         CursorGlow.db.profile.lowCPUTailLength = val
                     end,
                     disabled = function() return not CursorGlow.db.profile.lowCPUMode end,
-                },              
+                },
                 autoDisableLowFPS = {
                     type = 'toggle',
                     name = "Auto-disable on Low FPS",
@@ -1077,7 +1144,7 @@ function CursorGlow:SetLowCPUModeActive(enable)
 end
 
 
--- Now define CursorGlow:OnInitialize BELOW these functions!
+-- CursorGlow:OnInitialize 
 function CursorGlow:OnInitialize()
     self.db       = AceDB:New("CursorGlowDB", profileDefaults)
     self.dbChar   = AceDB:New("CursorGlowCharDB", charDefaults)
@@ -1173,6 +1240,82 @@ local stationaryTime = 0
 local pulseElapsedTime = 0
 local prevX, prevY = nil, nil
 
+-- Safe sparkle spawn (defensive)
+local function SpawnIdleSparkle(cursorX, cursorY)
+    local profile = CursorGlow.db and CursorGlow.db.profile
+    if not profile then return end
+
+    local poolCount = tonumber(profile.stationarySparklePoolCount) or idleSparklePoolSize
+    if poolCount < 1 then poolCount = idleSparklePoolSize end
+    local sizeMax = tonumber(profile.stationarySparkleSizeMax) or 14
+    CreateIdleSparklePool(poolCount, sizeMax)
+
+    local scale = UIParent:GetEffectiveScale()
+    local f = idleSparkles[idleSparkleIndex]
+    idleSparkleIndex = (idleSparkleIndex % poolCount) + 1
+    if not f then return end
+
+    -- sanitize numeric inputs
+    local offset = tonumber(profile.stationarySparkleOffset) or 10
+    if offset < 0 then offset = 0 end
+
+    -- safe random offset (float)
+    local rx = (math.random() * 2 - 1) * offset
+    local ry = (math.random() * 2 - 1) * offset
+
+    -- size range: ensure min/max are numbers and min <= max
+    local minS = tonumber(profile.stationarySparkleSizeMin) or 6
+    local maxS = tonumber(profile.stationarySparkleSizeMax) or 14
+    if minS > maxS then minS, maxS = maxS, minS end
+
+    local size
+    if maxS == minS then
+        size = minS
+    else
+        size = minS + math.random() * (maxS - minS)
+    end
+
+    f:SetPoint("CENTER", UIParent, "BOTTOMLEFT", (cursorX + rx) / scale, (cursorY + ry) / scale)
+    f:SetSize(size, size)
+
+    -- prefer sparkle-specific color, fallback to main profile color
+    local rr, gg, bb = 1,1,1
+    if profile.stationarySparkleColor and type(profile.stationarySparkleColor) == "table" then
+        rr, gg, bb = profile.stationarySparkleColor[1] or 1, profile.stationarySparkleColor[2] or 1, profile.stationarySparkleColor[3] or 1
+    else
+        local c = profile.color
+        if type(c) == "table" then rr, gg, bb = c[1] or 1, c[2] or 1, c[3] or 1
+        elseif type(c) == "string" then local m = colorOptions[c] or {1,1,1}; rr,gg,bb = m[1], m[2], m[3] end
+    end
+
+    -- apply colorblind transform if enabled
+    if profile.colorblindEnabled then
+        rr, gg, bb = ApplyColorblindTransform(rr, gg, bb, profile.colorblindMode or "none")
+    end
+
+    local a = tonumber(profile.opacity) or 1
+    f.texture:SetVertexColor(rr, gg, bb, a)
+    f:SetAlpha(1)
+    f:Show()
+
+    local life = tonumber(profile.stationarySparkleLifetime) or 0.8
+    local elapsed = 0
+    f:SetScript("OnUpdate", function(self, dt)
+        elapsed = elapsed + dt
+        local t = elapsed / life
+        if t >= 1 then
+            self:Hide()
+            self:SetScript("OnUpdate", nil)
+            return
+        end
+        -- fade and slight scale/pop
+        local alpha = 1 - t
+        local scaleUp = 1 + 0.2 * t
+        self:SetAlpha(alpha * a)
+        self:SetSize(size * scaleUp, size * scaleUp)
+    end)
+end
+
 -- OnUpdate
 frame:SetScript("OnUpdate", function(_, elapsed)
     local profile = CursorGlow.db.profile
@@ -1196,7 +1339,7 @@ frame:SetScript("OnUpdate", function(_, elapsed)
 
     local now = GetTime()
     local opacity = profile.opacity or 1
-    local r,g,b = GetActiveColor()
+    local r,g,b = GetActiveColorForMode()
 
     -- PATCHED: Base size logic
     local size
@@ -1215,6 +1358,15 @@ frame:SetScript("OnUpdate", function(_, elapsed)
         local cycles = profile.bounceSpeed or 2
         local amp    = profile.bounceAmplitude or 12
         bounceOffsetY = math.sin(now * cycles * math.pi * 2) * amp
+    end
+
+    -- Helper to compute main texture alpha with dimming when sparkles active
+    local function ComputeMainAlpha(opacity)
+        local mainAlpha = opacity
+        if profile.stationarySparkleEnabled and stationaryTime and stationaryTime > 0 and profile.stationarySparkleDimMain then
+            mainAlpha = opacity * (profile.stationarySparkleMainAlpha or 0.6)
+        end
+        return mainAlpha
     end
 
     -- Always On Cursor mode (now with tail + idle handling)
@@ -1251,11 +1403,7 @@ frame:SetScript("OnUpdate", function(_, elapsed)
         texture:ClearAllPoints()
         texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cursorX / scale, (cursorY + bounceOffsetY) / scale)
         texture:SetSize(size, size)
-        local mainAlpha = opacity
-if profile.stationarySparkleEnabled and stationaryTime and stationaryTime > 0 and profile.stationarySparkleDimMain then
-    mainAlpha = opacity * (profile.stationarySparkleMainAlpha or 0.6)
-end
-texture:SetAlpha(mainAlpha)
+        texture:SetAlpha(ComputeMainAlpha(opacity))
         texture:Show()
 
         -- Rotation
@@ -1513,11 +1661,7 @@ texture:SetAlpha(mainAlpha)
         texture:ClearAllPoints()
         texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cursorX / scale, (cursorY + bounceOffsetY) / scale)
         texture:SetSize(size, size)
-        local mainAlpha = opacity
-if profile.stationarySparkleEnabled and stationaryTime and stationaryTime > 0 and profile.stationarySparkleDimMain then
-    mainAlpha = opacity * (profile.stationarySparkleMainAlpha or 0.6)
-end
-texture:SetAlpha(mainAlpha)
+        texture:SetAlpha(ComputeMainAlpha(opacity))
         texture:Show()
         zzzFont:Hide()
 
@@ -1712,11 +1856,7 @@ texture:SetAlpha(mainAlpha)
                 texture:ClearAllPoints()
                 texture:SetPoint("CENTER", UIParent, "BOTTOMLEFT", cursorX / scale, (cursorY + bounceOffsetY) / scale)
                 texture:SetSize(pulseSize, pulseSize)
-                local mainAlpha = opacity
-if profile.stationarySparkleEnabled and stationaryTime and stationaryTime > 0 and profile.stationarySparkleDimMain then
-    mainAlpha = opacity * (profile.stationarySparkleMainAlpha or 0.6)
-end
-texture:SetAlpha(mainAlpha)
+                texture:SetAlpha(ComputeMainAlpha(opacity))
                 texture:Show()
             else
                 texture:Hide()
