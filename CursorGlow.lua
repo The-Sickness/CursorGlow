@@ -1,7 +1,6 @@
 -- CursorGlow
 -- Made by Sharpedge_Gaming
--- v6.4
--- Modified by The-Sickness: added stationary sparkles, color picker, dimming, color-blind support, and defensive checks.
+-- v6.6 Midnight Beta
 
 local LibStub = LibStub or _G.LibStub
 local AceDB            = LibStub:GetLibrary("AceDB-3.0")
