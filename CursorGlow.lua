@@ -1,6 +1,6 @@
 -- CursorGlow
 -- Made by Sharpedge_Gaming
--- v6.6 Midnight Beta
+-- v6.8 Midnight Release
 
 local LibStub = LibStub or _G.LibStub
 local AceDB            = LibStub:GetLibrary("AceDB-3.0")
@@ -19,6 +19,7 @@ local CursorGlow = AceAddon:NewAddon("CursorGlow", "AceEvent-3.0", "AceConsole-3
 local NUM_PARTICLES   = 100
 local EXPLOSION_SPEED = 30
 CursorGlow.rotationAngle = 0
+CursorGlow._settingsCategoryID = nil
 
 -- Texture options
 local textureOptions = {
@@ -400,6 +401,75 @@ local function TriggerExplosionOnClick()
     TriggerExplosion(x, y)
 end
 
+local function EnsureSettingsLoaded()
+    if not Settings and LoadAddOn then
+        LoadAddOn("Blizzard_Settings")
+    end
+end
+
+local function ResolveCursorGlowCategoryID()
+    if CursorGlow._settingsCategoryID then
+        return CursorGlow._settingsCategoryID
+    end
+    if Settings and Settings.GetCategory then
+        local cat = Settings.GetCategory("CursorGlow")
+        if cat and type(cat.ID) == "number" then
+            CursorGlow._settingsCategoryID = cat.ID
+            return cat.ID
+        end
+        local addons = Settings.GetCategory("AddOns")
+        if addons and Settings.GetSubcategories then
+            for _, sub in ipairs(Settings.GetSubcategories(addons) or {}) do
+                if sub and sub.Name == "CursorGlow" and type(sub.ID) == "number" then
+                    CursorGlow._settingsCategoryID = sub.ID
+                    return sub.ID
+                end
+            end
+        end
+    end
+    return nil
+end
+
+local function OpenCursorGlowCategory()
+    EnsureSettingsLoaded()
+
+    local id = ResolveCursorGlowCategoryID()
+    if id and Settings and Settings.OpenToCategory then
+        Settings.OpenToCategory(id) 
+        return
+    end
+
+    -- Fallback: open settings panel with scroll hint
+    if C_SettingsUtil and C_SettingsUtil.OpenSettingsPanel then
+        C_SettingsUtil.OpenSettingsPanel(nil, "CursorGlow")
+        return
+    end
+
+    -- Legacy fallback
+    if InterfaceOptionsFrame_OpenToCategory then
+        InterfaceOptionsFrame_OpenToCategory("CursorGlow")
+        InterfaceOptionsFrame_OpenToCategory("CursorGlow")
+    end
+end
+
+local function OpenMainOptions()
+    EnsureSettingsLoaded()
+
+    if C_SettingsUtil and C_SettingsUtil.OpenSettingsPanel then
+        C_SettingsUtil.OpenSettingsPanel()
+        return
+    end
+    if Settings and Settings.OpenToCategory then
+        Settings.OpenToCategory() 
+        return
+    end
+    if InterfaceOptionsFrame_Show then
+        InterfaceOptionsFrame_Show()
+    elseif InterfaceOptionsFrame then
+        InterfaceOptionsFrame:Show()
+    end
+end
+
 -- LDB / Minimap
 local minimapButton = LDB:NewDataObject("CursorGlow", {
     type = "data source",
@@ -407,21 +477,15 @@ local minimapButton = LDB:NewDataObject("CursorGlow", {
     icon = "Interface\\Icons\\Spell_Frost_Frost",
     OnClick = function(_, button)
         if button == "LeftButton" then
-            if Settings and Settings.OpenToCategory then
-                Settings.OpenToCategory("CursorGlow")
-            else
-                InterfaceOptionsFrame_OpenToCategory("CursorGlow")
-                InterfaceOptionsFrame_OpenToCategory("CursorGlow")
-            end
+            OpenCursorGlowCategory()
         elseif button == "RightButton" then
-            CursorGlow.db.profile.enabled = not CursorGlow.db.profile.enabled
-            ToggleAddon(CursorGlow.db.profile.enabled)
+            OpenMainOptions()
         end
     end,
     OnTooltipShow = function(tt)
         tt:AddLine("|cFF00FF00CursorGlow|r")
-        tt:AddLine("|cFFFFFFFFLeft-click to open settings.|r")
-        tt:AddLine("|cFFFFFFFFRight-click to toggle addon.|r")
+        tt:AddLine("|cFFFFFFFFLeft-click to open CursorGlow settings.|r")
+        tt:AddLine("|cFFFFFFFFRight-click to open the Options menu.|r")
     end,
 })
 
@@ -1172,11 +1236,25 @@ function CursorGlow:OnInitialize()
     end
     if self.db.profile.minimap and self.db.profile.minimap.hide then icon:Hide("CursorGlow") else icon:Show("CursorGlow") end
 
-    AceConfig:RegisterOptionsTable("CursorGlow", options)
-    AceConfigDialog:AddToBlizOptions("CursorGlow", "CursorGlow")
-    local profilesOptions = AceDBOptions:GetOptionsTable(self.db)
-    AceConfig:RegisterOptionsTable("CursorGlow Profiles", profilesOptions)
-    AceConfigDialog:AddToBlizOptions("CursorGlow Profiles", "Profiles", "CursorGlow")
+    -- Register options with Blizzard UI (guard options)
+    if type(options) == "table" then
+        AceConfig:RegisterOptionsTable("CursorGlow", options)
+        local blizzPanel = AceConfigDialog:AddToBlizOptions("CursorGlow", "CursorGlow")
+
+        -- 12.0+ Settings category registration: capture numeric ID
+        if Settings and Settings.RegisterCanvasLayoutCategory and Settings.RegisterAddOnCategory then
+            local cat = Settings.RegisterCanvasLayoutCategory(blizzPanel, "CursorGlow", "CursorGlow")
+            Settings.RegisterAddOnCategory(cat)
+            CursorGlow._settingsCategoryID = cat and cat.ID  -- numeric ID
+        end
+
+        -- Profiles sub-panel
+        local profilesOptions = AceDBOptions:GetOptionsTable(self.db)
+        AceConfig:RegisterOptionsTable("CursorGlow Profiles", profilesOptions)
+        AceConfigDialog:AddToBlizOptions("CursorGlow Profiles", "Profiles", "CursorGlow")
+    else
+        DEFAULT_CHAT_FRAME:AddMessage("CursorGlow: options table is missing; settings panel not registered.")
+    end
 end
 
 -- Events
