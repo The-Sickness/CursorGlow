@@ -1,6 +1,6 @@
 -- CursorGlow
 -- Made by Sharpedge_Gaming
--- v6.8 Midnight Release
+-- v7.0 Midnight Beta
 
 local LibStub = LibStub or _G.LibStub
 local AceDB            = LibStub:GetLibrary("AceDB-3.0")
@@ -1214,8 +1214,8 @@ function CursorGlow:OnInitialize()
     self.dbGlobal = AceDB:New("CursorGlowGlobalDB", globalDefaults)
 
     self.db.RegisterCallback(self, "OnProfileChanged", "OnProfileChanged")
-    self.db.RegisterCallback(self, "OnProfileCopied", "OnProfileChanged")
-    self.db.RegisterCallback(self, "OnProfileReset", "OnProfileChanged")
+    self.db.RegisterCallback(self, "OnProfileCopied",  "OnProfileChanged")
+    self.db.RegisterCallback(self, "OnProfileReset",   "OnProfileChanged")
 
     if self.dbGlobal.global.profileEnabled then
         self.db:SetProfile("Global")
@@ -1234,21 +1234,24 @@ function CursorGlow:OnInitialize()
     else
         DEFAULT_CHAT_FRAME:AddMessage("CursorGlow: Error initializing minimap button or LibDBIcon.")
     end
-    if self.db.profile.minimap and self.db.profile.minimap.hide then icon:Hide("CursorGlow") else icon:Show("CursorGlow") end
+    if self.db.profile.minimap and self.db.profile.minimap.hide then
+        icon:Hide("CursorGlow")
+    else
+        icon:Show("CursorGlow")
+    end
 
     -- Register options with Blizzard UI (guard options)
     if type(options) == "table" then
         AceConfig:RegisterOptionsTable("CursorGlow", options)
         local blizzPanel = AceConfigDialog:AddToBlizOptions("CursorGlow", "CursorGlow")
 
-        -- 12.0+ Settings category registration: capture numeric ID
-        if Settings and Settings.RegisterCanvasLayoutCategory and Settings.RegisterAddOnCategory then
-            local cat = Settings.RegisterCanvasLayoutCategory(blizzPanel, "CursorGlow", "CursorGlow")
-            Settings.RegisterAddOnCategory(cat)
-            CursorGlow._settingsCategoryID = cat and cat.ID  -- numeric ID
+        -- 12.0+ Settings: reuse the category created by AddToBlizOptions
+        if Settings and Settings.GetCategory then
+            local cat = Settings.GetCategory("CursorGlow")
+            CursorGlow._settingsCategoryID = cat and cat.ID  -- numeric ID for OpenToCategory
         end
 
-        -- Profiles sub-panel
+        -- Profiles sub-panel (child under CursorGlow)
         local profilesOptions = AceDBOptions:GetOptionsTable(self.db)
         AceConfig:RegisterOptionsTable("CursorGlow Profiles", profilesOptions)
         AceConfigDialog:AddToBlizOptions("CursorGlow Profiles", "Profiles", "CursorGlow")
