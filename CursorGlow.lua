@@ -1251,17 +1251,28 @@ function CursorGlow:OnInitialize()
         local blizzPanel = AceConfigDialog:AddToBlizOptions("CursorGlow", "CursorGlow")
         self._blizzPanel = blizzPanel
 
-        -- Capture numeric category ID from the panel (no extra registration)
+        -- Register with Dragonflight/12.x Settings so we get a real category object and ID
+        EnsureSettingsLoaded()
+        if Settings and Settings.RegisterAddOnCategory and Settings.RegisterCanvasLayoutCategory then
+            local category = Settings.RegisterCanvasLayoutCategory(blizzPanel, "CursorGlow")
+            Settings.RegisterAddOnCategory(category)
+            CursorGlow._settingsCategory = category
+            if type(category.ID) == "number" then
+                CursorGlow._settingsCategoryID = category.ID
+            end
+        end
+
+        -- Capture numeric category ID from the panel (legacy path)
         local cid = blizzPanel and (blizzPanel.ID or (blizzPanel.GetID and blizzPanel:GetID()))
         if type(cid) == "number" then
-            CursorGlow._settingsCategoryID = cid
+            CursorGlow._settingsCategoryID = CursorGlow._settingsCategoryID or cid
         else
-            EnsureSettingsLoaded()
             if Settings and Settings.GetCategory then
                 local cat = Settings.GetCategory("CursorGlow")
                 cid = cat and (cat.ID or (cat.GetID and cat:GetID()))
                 if type(cid) == "number" then
-                    CursorGlow._settingsCategoryID = cid
+                    CursorGlow._settingsCategoryID = CursorGlow._settingsCategoryID or cid
+                    CursorGlow._settingsCategory = CursorGlow._settingsCategory or cat
                 end
             end
         end
@@ -1276,30 +1287,57 @@ function CursorGlow:OnInitialize()
 end
 
 local function ResolveCursorGlowCategoryID()
-    if type(CursorGlow._settingsCategoryID) == "number" then
-        return CursorGlow._settingsCategoryID
+    if CursorGlow._settingsCategoryID and CursorGlow._settingsCategory then
+        return CursorGlow._settingsCategoryID, CursorGlow._settingsCategory
     end
 
-    -- Try the stored panel first (no re-registration)
     if CursorGlow._blizzPanel then
         local cid = CursorGlow._blizzPanel.ID or (CursorGlow._blizzPanel.GetID and CursorGlow._blizzPanel:GetID())
         if type(cid) == "number" then
             CursorGlow._settingsCategoryID = cid
-            return cid
+            return cid, CursorGlow._settingsCategory
         end
     end
 
-    -- Then try Settings catalog
     if Settings and Settings.GetCategory then
         local cat = Settings.GetCategory("CursorGlow")
         local cid = cat and (cat.ID or (cat.GetID and cat:GetID()))
         if type(cid) == "number" then
             CursorGlow._settingsCategoryID = cid
-            return cid
+            CursorGlow._settingsCategory = cat
+            return cid, cat
         end
     end
 
-    return nil
+    return nil, nil
+end
+
+local function OpenCursorGlowCategory()
+    EnsureSettingsLoaded()
+
+    local id, cat = ResolveCursorGlowCategoryID()
+    if Settings and Settings.OpenToCategory then
+        -- Prefer the category object (Midnight/12.x)
+        if cat then
+            Settings.OpenToCategory(cat)
+            return
+        elseif id then
+            Settings.OpenToCategory(id)
+            return
+        end
+    end
+
+    -- Pre-12 scroll hint; harmless on 12.x
+    if C_SettingsUtil and C_SettingsUtil.OpenSettingsPanel then
+        C_SettingsUtil.OpenSettingsPanel(nil, "CursorGlow")
+        return
+    end
+
+    -- Legacy fallback
+    if InterfaceOptionsFrame_OpenToCategory then
+        InterfaceOptionsFrame_OpenToCategory("CursorGlow")
+        InterfaceOptionsFrame_OpenToCategory("CursorGlow")
+    end
 end
 
 -- Events
