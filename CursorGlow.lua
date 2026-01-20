@@ -20,6 +20,7 @@ local NUM_PARTICLES   = 100
 local EXPLOSION_SPEED = 30
 local BUILD_NUMBER = select(4, GetBuildInfo())
 local IS_12_OR_NEWER = BUILD_NUMBER >= 120000
+local outlinePool = {}
 CursorGlow.rotationAngle = 0
 CursorGlow._settingsCategoryID = nil
 
@@ -541,6 +542,12 @@ local profileDefaults = {
         autoDisableLowFPS = false,
         lowFPSThreshold = 20,
         lowFPSFallback = "disable", -- "disable" or "lowcpu"
+        simpleGlowEnabled   = false,      -- reuse this toggle for the outline mode
+        simpleGlowTexture   = "Interface\\CURSOR\\Point-32",
+        simpleGlowSize      = 96,
+        simpleGlowOpacity   = 0.45,
+        simpleGlowColor     = {0.8, 0.9, 1},
+        simpleGlowThickness = 6,          -- outline thickness in pixels
         -- Stationary sparkles settings
         stationarySparkleEnabled = false,
         stationarySparkleInterval = 0.15,
@@ -592,6 +599,12 @@ function CursorGlow:ApplySettings()
     profile.tailParticleSpeed   = profile.tailParticleSpeed or 0.5
     profile.tailParticleScatter = profile.tailParticleScatter or 6
     profile.tailParticleWobble  = profile.tailParticleWobble or 5
+    profile.simpleGlowEnabled   = profile.simpleGlowEnabled   or false
+    profile.simpleGlowTexture   = profile.simpleGlowTexture   or "Interface\\CURSOR\\Point"
+    profile.simpleGlowSize      = profile.simpleGlowSize      or 96
+    profile.simpleGlowOpacity   = profile.simpleGlowOpacity   or 0.45
+    profile.simpleGlowColor     = profile.simpleGlowColor     or {0.8, 0.9, 1}
+    profile.simpleGlowThickness = profile.simpleGlowThickness or 6
     -- stationary sparkles fallback defaults
     profile.stationarySparkleEnabled = profile.stationarySparkleEnabled or false
     profile.stationarySparkleInterval = profile.stationarySparkleInterval or 0.15
@@ -665,6 +678,33 @@ end
 function CursorGlow:OnProfileChanged()
     self.dbChar.char.lastSelectedProfile = self.db:GetCurrentProfile()
     self:ApplySettings()
+end
+
+-- near top with other locals
+local outlinePool = {}
+
+local function EnsureOutlinePool(texturePath)
+    texturePath = texturePath or "Interface\\CURSOR\\Point-32"
+    for i = 1, 8 do
+        if not outlinePool[i] then
+            local t = frame:CreateTexture(nil, "BACKGROUND")
+            t:SetBlendMode("ADD")
+            outlinePool[i] = t
+        end
+        -- try HD first, then SD, then a safe addon texture
+        if not outlinePool[i]:SetTexture(texturePath) then
+            if not outlinePool[i]:SetTexture("Interface\\CURSOR\\Point") then
+                outlinePool[i]:SetTexture("Interface\\AddOns\\CursorGlow\\Textures\\Test11.png")
+            end
+        end
+    end
+end
+
+local function UpdateSimpleGlowTexture()
+    local profile = CursorGlow.db.profile
+    local path = textureOptions[profile.simpleGlowTexture] or textureOptions["ring14"]
+    texture:SetTexture(path)
+    texture:SetBlendMode("ADD")
 end
 
 -- Options
@@ -859,6 +899,45 @@ local options = {
                     type='range', name=L["Maximum Size"], desc=L["Set the maximum size of the texture"], order=6, min=16, max=256, step=1,
                     get=function() return CursorGlow.db.profile.maxSize end,
                     set=function(_, v) CursorGlow.db.profile.maxSize = v end,
+					},
+					        simpleGlowHeader = { type='header', name="Simple Glow (leave cursor unchanged)", order=0.9 },
+        simpleGlowEnabled = {
+            type='toggle', name="Enable Simple Glow", order=0.91,
+            desc="Leave the normal glove cursor, add a faint glow behind it.",
+            get=function() return CursorGlow.db.profile.simpleGlowEnabled end,
+            set=function(_, v)
+                CursorGlow.db.profile.simpleGlowEnabled = v
+                CursorGlow:ApplySettings()
+            end,
+        },
+        simpleGlowSize = {
+            type='range', name="Glow Size", order=0.92, min=16, max=128, step=1,
+            get=function() return CursorGlow.db.profile.simpleGlowSize end,
+            set=function(_, v) CursorGlow.db.profile.simpleGlowSize = v end,
+            disabled=function() return not CursorGlow.db.profile.simpleGlowEnabled end,
+        },
+        simpleGlowOpacity = {
+            type='range', name="Glow Opacity", order=0.93, min=0, max=1, step=0.01,
+            get=function() return CursorGlow.db.profile.simpleGlowOpacity end,
+            set=function(_, v) CursorGlow.db.profile.simpleGlowOpacity = v end,
+            disabled=function() return not CursorGlow.db.profile.simpleGlowEnabled end,
+        },
+        simpleGlowColor = {
+            type='color', name="Glow Color", order=0.94, hasAlpha=false,
+            get=function()
+                local c = CursorGlow.db.profile.simpleGlowColor or {0.8,0.9,1}
+                return c[1], c[2], c[3]
+            end,
+            set=function(_, r,g,b)
+                CursorGlow.db.profile.simpleGlowColor = {r,g,b}
+            end,
+            disabled=function() return not CursorGlow.db.profile.simpleGlowEnabled end,
+        },
+        simpleGlowTexture = {
+            type='select', name="Glow Texture", order=0.95, values=valuesTextures,
+            get=function() return CursorGlow.db.profile.simpleGlowTexture end,
+            set=function(_, v) CursorGlow.db.profile.simpleGlowTexture = v; UpdateSimpleGlowTexture() end,
+            disabled=function() return not CursorGlow.db.profile.simpleGlowEnabled end,
                 },
             },
         },
@@ -1476,10 +1555,54 @@ local function SpawnIdleSparkle(cursorX, cursorY)
     end)
 end
 
--- OnUpdate
 frame:SetScript("OnUpdate", function(_, elapsed)
     local profile = CursorGlow.db.profile
     if not profile then return end
+
+    -- >>> Simple outline mode: faint outline of the glove cursor <<<
+    if profile.simpleGlowEnabled then
+        local scale = UIParent:GetEffectiveScale()
+        local cursorX, cursorY = GetCursorPosition()
+        if cursorX == 0 and cursorY == 0 then return end
+
+        -- hide other effects
+        zzzFont:Hide()
+        ClearIdleSparkles()
+        for _, group in pairs(tailTextures) do
+            for _, t in ipairs(group or {}) do if t then t:Hide() end end
+        end
+
+        local size      = profile.simpleGlowSize or 96
+        local alpha     = profile.simpleGlowOpacity or 0.45
+        local thickness = profile.simpleGlowThickness or 6
+        local cr, cg, cb = (profile.simpleGlowColor and profile.simpleGlowColor[1]) or 0.8,
+                           (profile.simpleGlowColor and profile.simpleGlowColor[2]) or 0.9,
+                           (profile.simpleGlowColor and profile.simpleGlowColor[3]) or 1
+
+        -- honor colorblind transform if enabled
+        if profile.colorblindEnabled then
+            cr, cg, cb = ApplyColorblindTransform(cr, cg, cb, profile.colorblindMode or "none")
+        end
+
+        EnsureOutlinePool(profile.simpleGlowTexture)
+
+        local offsets = {
+            { thickness, 0 }, { -thickness, 0 }, { 0, thickness }, { 0, -thickness },
+            { thickness, thickness }, { thickness, -thickness }, { -thickness, thickness }, { -thickness, -thickness },
+        }
+
+        for i, off in ipairs(offsets) do
+            local t = outlinePool[i]
+            t:ClearAllPoints()
+            t:SetPoint("CENTER", UIParent, "BOTTOMLEFT", (cursorX + off[1]) / scale, (cursorY + off[2]) / scale)
+            t:SetSize(size, size)
+            t:SetVertexColor(cr, cg, cb, alpha)
+            t:Show()
+        end
+
+        prevX, prevY = cursorX, cursorY
+        return
+    end
 
     local scale = UIParent:GetEffectiveScale()
     local cursorX, cursorY = GetCursorPosition()
