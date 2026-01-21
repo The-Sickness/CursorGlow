@@ -1,6 +1,6 @@
 -- CursorGlow
 -- Made by Sharpedge_Gaming
--- v7.0 Midnight Beta
+-- v7.1 Midnight Beta
 
 local LibStub = LibStub or _G.LibStub
 local AceDB            = LibStub:GetLibrary("AceDB-3.0")
@@ -15,12 +15,10 @@ local icon             = LibStub("LibDBIcon-1.0")
 local L                = LibStub("AceLocale-3.0"):GetLocale("CursorGlow", true)
 
 local CursorGlow = AceAddon:NewAddon("CursorGlow", "AceEvent-3.0", "AceConsole-3.0")
+LibStub("AceConfigDialog-3.0"):SetDefaultSize("CursorGlow", 900, 800)
 
 local NUM_PARTICLES   = 100
 local EXPLOSION_SPEED = 30
-local BUILD_NUMBER = select(4, GetBuildInfo())
-local IS_12_OR_NEWER = BUILD_NUMBER >= 120000
-local outlinePool = {}
 CursorGlow.rotationAngle = 0
 CursorGlow._settingsCategoryID = nil
 
@@ -89,7 +87,7 @@ local frame = CreateFrame("Frame", nil, UIParent)
 frame:SetFrameStrata("TOOLTIP")
 
 local texture = frame:CreateTexture()
-texture:SetTexture(textureOptions["ring14"]) -- safe initial texture
+texture:SetTexture(textureOptions["ring14"]) 
 texture:SetBlendMode("ADD")
 texture:SetSize(32, 32)
 CursorGlow.texture = texture
@@ -404,7 +402,6 @@ local function TriggerExplosionOnClick()
     TriggerExplosion(x, y)
 end
 
--- Helpers
 local function EnsureSettingsLoaded()
     if not Settings and LoadAddOn then
         LoadAddOn("Blizzard_Settings")
@@ -412,87 +409,94 @@ local function EnsureSettingsLoaded()
 end
 
 local function ResolveCursorGlowCategoryID()
-    if type(CursorGlow._settingsCategoryID) == "number" then
+    if CursorGlow._settingsCategoryID then
         return CursorGlow._settingsCategoryID
     end
-
-    -- Try the stored Blizzard panel first (no re-registration)
-    if CursorGlow._blizzPanel then
-        local cid = CursorGlow._blizzPanel.ID or (CursorGlow._blizzPanel.GetID and CursorGlow._blizzPanel:GetID())
-        if type(cid) == "number" then
-            CursorGlow._settingsCategoryID = cid
-            return cid
-        end
-    end
-
-    -- Then try Settings catalog
     if Settings and Settings.GetCategory then
         local cat = Settings.GetCategory("CursorGlow")
-        local cid = cat and (cat.ID or (cat.GetID and cat:GetID()))
-        if type(cid) == "number" then
-            CursorGlow._settingsCategoryID = cid
-            return cid
+        if cat and type(cat.ID) == "number" then
+            CursorGlow._settingsCategoryID = cat.ID
+            return cat.ID
+        end
+        local addons = Settings.GetCategory("AddOns")
+        if addons and Settings.GetSubcategories then
+            for _, sub in ipairs(Settings.GetSubcategories(addons) or {}) do
+                if sub and sub.Name == "CursorGlow" and type(sub.ID) == "number" then
+                    CursorGlow._settingsCategoryID = sub.ID
+                    return sub.ID
+                end
+            end
         end
     end
-
     return nil
 end
 
-local function OpenCursorGlowCategory()
+-- Function to open the CursorGlow settings category
+local function OpenCursorGlowSettings()
+    -- Ensure settings are loaded in all cases
     EnsureSettingsLoaded()
 
-    local id = ResolveCursorGlowCategoryID()
-    if id and Settings and Settings.OpenToCategory then
-        Settings.OpenToCategory(id) -- numeric only
+    -- Preferred: Use the modern Settings API if available
+    if Settings and Settings.OpenToCategory and type(CursorGlowCategoryID) == "number" then
+        Settings.OpenToCategory(CursorGlowCategoryID) -- Focus directly on CursorGlow's settings
         return
     end
 
-    -- Pre-12 scroll hint; harmless on 12.x
-    if C_SettingsUtil and C_SettingsUtil.OpenSettingsPanel then
-        C_SettingsUtil.OpenSettingsPanel(nil, "CursorGlow")
+    -- Fallback: Use AceConfigDialog to open settings
+    if AceConfigDialog and AceConfigDialog.Open then
+        AceConfigDialog:Open("CursorGlow") -- Open settings using AceConfig
         return
     end
 
-    -- Legacy fallback
+    -- Legacy: Use InterfaceOptionsFrame for older WoW clients
     if InterfaceOptionsFrame_OpenToCategory then
-        InterfaceOptionsFrame_OpenToCategory("CursorGlow")
-        InterfaceOptionsFrame_OpenToCategory("CursorGlow")
+        InterfaceOptionsFrame_OpenToCategory("CursorGlow") -- Open AddOns tab at CursorGlow
+        InterfaceOptionsFrame_OpenToCategory("CursorGlow") -- Bug workaround for inconsistent behavior
+        return
     end
+
+    -- Error message as a failsafe
+    print("|cffff0000CursorGlow: Settings not available.|r")
 end
 
+-- Function to open the main WoW Options panel
 local function OpenMainOptions()
     EnsureSettingsLoaded()
+
+    -- Modern WoW: Open the main Settings panel
     if C_SettingsUtil and C_SettingsUtil.OpenSettingsPanel then
         C_SettingsUtil.OpenSettingsPanel()
         return
     end
+
     if Settings and Settings.OpenToCategory then
-        Settings.OpenToCategory()
+        Settings.OpenToCategory(nil) -- Show the root of the Settings panel
         return
     end
-    if InterfaceOptionsFrame_Show then
-        InterfaceOptionsFrame_Show()
-    elseif InterfaceOptionsFrame then
-        InterfaceOptionsFrame:Show()
+
+    -- Legacy WoW: Open the Interface Options frame
+    if InterfaceOptionsFrame then
+        InterfaceOptionsFrame:Show() -- Use :Show() directly, as InterfaceOptionsFrame_Show may not exist
+        return
     end
 end
 
--- LDB / Minimap
+-- Update the minimap button behavior
 local minimapButton = LDB:NewDataObject("CursorGlow", {
     type = "data source",
     text = "CursorGlow",
-    icon = "Interface\\Icons\\Spell_Frost_Frost",
+    icon = 1362657,
     OnClick = function(_, button)
         if button == "LeftButton" then
-            OpenCursorGlowCategory()
+            OpenMainOptions() -- Open the full Options panel
         elseif button == "RightButton" then
-            OpenMainOptions()
+            OpenCursorGlowSettings() -- Open CursorGlow settings only
         end
     end,
-    OnTooltipShow = function(tt)
-        tt:AddLine("|cFF00FF00CursorGlow|r")
-        tt:AddLine("|cFFFFFFFFLeft-click to open CursorGlow settings.|r")
-        tt:AddLine("|cFFFFFFFFRight-click to open the Options menu.|r")
+    OnTooltipShow = function(tooltip)
+        tooltip:AddLine("|cff00ff00CursorGlow|r")
+        tooltip:AddLine("|cffffff00Left-Click:|r Open Options", 1, 1, 1)
+        tooltip:AddLine("|cffffff00Right-Click:|r Open CursorGlow Settings", 1, 1, 1)
     end,
 })
 
@@ -524,7 +528,7 @@ local profileDefaults = {
         enabled = true,
         idleIndicatorEnabled = true,
         idleThreshold = 60,
-        tailEffectStyle = "classic", -- now supports "fire", "electric", "bubble", etc.
+        tailEffectStyle = "classic", 
         tailEffectStyles = { "classic", "rainbow", "sparkle", "wobble", "burst", "comet", "pulse", "twist", "wave", "bounce", "fire", "electric", "bubble", "ribbon" },
         tailParticleSpeed = 0.5,
         tailParticleScatter = 6,
@@ -541,13 +545,7 @@ local profileDefaults = {
         autoDisableRaid = false,
         autoDisableLowFPS = false,
         lowFPSThreshold = 20,
-        lowFPSFallback = "disable", -- "disable" or "lowcpu"
-        simpleGlowEnabled   = false,      -- reuse this toggle for the outline mode
-        simpleGlowTexture   = "Interface\\CURSOR\\Point-32",
-        simpleGlowSize      = 96,
-        simpleGlowOpacity   = 0.45,
-        simpleGlowColor     = {0.8, 0.9, 1},
-        simpleGlowThickness = 6,          -- outline thickness in pixels
+        lowFPSFallback = "disable", 
         -- Stationary sparkles settings
         stationarySparkleEnabled = false,
         stationarySparkleInterval = 0.15,
@@ -599,12 +597,6 @@ function CursorGlow:ApplySettings()
     profile.tailParticleSpeed   = profile.tailParticleSpeed or 0.5
     profile.tailParticleScatter = profile.tailParticleScatter or 6
     profile.tailParticleWobble  = profile.tailParticleWobble or 5
-    profile.simpleGlowEnabled   = profile.simpleGlowEnabled   or false
-    profile.simpleGlowTexture   = profile.simpleGlowTexture   or "Interface\\CURSOR\\Point"
-    profile.simpleGlowSize      = profile.simpleGlowSize      or 96
-    profile.simpleGlowOpacity   = profile.simpleGlowOpacity   or 0.45
-    profile.simpleGlowColor     = profile.simpleGlowColor     or {0.8, 0.9, 1}
-    profile.simpleGlowThickness = profile.simpleGlowThickness or 6
     -- stationary sparkles fallback defaults
     profile.stationarySparkleEnabled = profile.stationarySparkleEnabled or false
     profile.stationarySparkleInterval = profile.stationarySparkleInterval or 0.15
@@ -678,33 +670,6 @@ end
 function CursorGlow:OnProfileChanged()
     self.dbChar.char.lastSelectedProfile = self.db:GetCurrentProfile()
     self:ApplySettings()
-end
-
--- near top with other locals
-local outlinePool = {}
-
-local function EnsureOutlinePool(texturePath)
-    texturePath = texturePath or "Interface\\CURSOR\\Point-32"
-    for i = 1, 8 do
-        if not outlinePool[i] then
-            local t = frame:CreateTexture(nil, "BACKGROUND")
-            t:SetBlendMode("ADD")
-            outlinePool[i] = t
-        end
-        -- try HD first, then SD, then a safe addon texture
-        if not outlinePool[i]:SetTexture(texturePath) then
-            if not outlinePool[i]:SetTexture("Interface\\CURSOR\\Point") then
-                outlinePool[i]:SetTexture("Interface\\AddOns\\CursorGlow\\Textures\\Test11.png")
-            end
-        end
-    end
-end
-
-local function UpdateSimpleGlowTexture()
-    local profile = CursorGlow.db.profile
-    local path = textureOptions[profile.simpleGlowTexture] or textureOptions["ring14"]
-    texture:SetTexture(path)
-    texture:SetBlendMode("ADD")
 end
 
 -- Options
@@ -899,45 +864,6 @@ local options = {
                     type='range', name=L["Maximum Size"], desc=L["Set the maximum size of the texture"], order=6, min=16, max=256, step=1,
                     get=function() return CursorGlow.db.profile.maxSize end,
                     set=function(_, v) CursorGlow.db.profile.maxSize = v end,
-					},
-					        simpleGlowHeader = { type='header', name="Simple Glow (leave cursor unchanged)", order=0.9 },
-        simpleGlowEnabled = {
-            type='toggle', name="Enable Simple Glow", order=0.91,
-            desc="Leave the normal glove cursor, add a faint glow behind it.",
-            get=function() return CursorGlow.db.profile.simpleGlowEnabled end,
-            set=function(_, v)
-                CursorGlow.db.profile.simpleGlowEnabled = v
-                CursorGlow:ApplySettings()
-            end,
-        },
-        simpleGlowSize = {
-            type='range', name="Glow Size", order=0.92, min=16, max=128, step=1,
-            get=function() return CursorGlow.db.profile.simpleGlowSize end,
-            set=function(_, v) CursorGlow.db.profile.simpleGlowSize = v end,
-            disabled=function() return not CursorGlow.db.profile.simpleGlowEnabled end,
-        },
-        simpleGlowOpacity = {
-            type='range', name="Glow Opacity", order=0.93, min=0, max=1, step=0.01,
-            get=function() return CursorGlow.db.profile.simpleGlowOpacity end,
-            set=function(_, v) CursorGlow.db.profile.simpleGlowOpacity = v end,
-            disabled=function() return not CursorGlow.db.profile.simpleGlowEnabled end,
-        },
-        simpleGlowColor = {
-            type='color', name="Glow Color", order=0.94, hasAlpha=false,
-            get=function()
-                local c = CursorGlow.db.profile.simpleGlowColor or {0.8,0.9,1}
-                return c[1], c[2], c[3]
-            end,
-            set=function(_, r,g,b)
-                CursorGlow.db.profile.simpleGlowColor = {r,g,b}
-            end,
-            disabled=function() return not CursorGlow.db.profile.simpleGlowEnabled end,
-        },
-        simpleGlowTexture = {
-            type='select', name="Glow Texture", order=0.95, values=valuesTextures,
-            get=function() return CursorGlow.db.profile.simpleGlowTexture end,
-            set=function(_, v) CursorGlow.db.profile.simpleGlowTexture = v; UpdateSimpleGlowTexture() end,
-            disabled=function() return not CursorGlow.db.profile.simpleGlowEnabled end,
                 },
             },
         },
@@ -1291,6 +1217,7 @@ function CursorGlow:SetLowCPUModeActive(enable)
     CursorGlow:ApplySettings()
 end
 
+
 -- CursorGlow:OnInitialize 
 function CursorGlow:OnInitialize()
     self.db       = AceDB:New("CursorGlowDB", profileDefaults)
@@ -1324,36 +1251,15 @@ function CursorGlow:OnInitialize()
         icon:Show("CursorGlow")
     end
 
-    -- Register options with Blizzard UI (single path to avoid duplicates)
+    -- Register options with Blizzard UI (guard options)
     if type(options) == "table" then
         AceConfig:RegisterOptionsTable("CursorGlow", options)
         local blizzPanel = AceConfigDialog:AddToBlizOptions("CursorGlow", "CursorGlow")
-        self._blizzPanel = blizzPanel
 
-        -- Register with Dragonflight/12.x Settings so we get a real category object and ID
-        EnsureSettingsLoaded()
-        if Settings and Settings.RegisterAddOnCategory and Settings.RegisterCanvasLayoutCategory then
-            local category = Settings.RegisterCanvasLayoutCategory(blizzPanel, "CursorGlow")
-            Settings.RegisterAddOnCategory(category)
-            CursorGlow._settingsCategory = category
-            if type(category.ID) == "number" then
-                CursorGlow._settingsCategoryID = category.ID
-            end
-        end
-
-        -- Capture numeric category ID from the panel (legacy path)
-        local cid = blizzPanel and (blizzPanel.ID or (blizzPanel.GetID and blizzPanel:GetID()))
-        if type(cid) == "number" then
-            CursorGlow._settingsCategoryID = CursorGlow._settingsCategoryID or cid
-        else
-            if Settings and Settings.GetCategory then
-                local cat = Settings.GetCategory("CursorGlow")
-                cid = cat and (cat.ID or (cat.GetID and cat:GetID()))
-                if type(cid) == "number" then
-                    CursorGlow._settingsCategoryID = CursorGlow._settingsCategoryID or cid
-                    CursorGlow._settingsCategory = CursorGlow._settingsCategory or cat
-                end
-            end
+        -- 12.0+ Settings: reuse the category created by AddToBlizOptions
+        if Settings and Settings.GetCategory then
+            local cat = Settings.GetCategory("CursorGlow")
+            CursorGlow._settingsCategoryID = cat and cat.ID  -- numeric ID for OpenToCategory
         end
 
         -- Profiles sub-panel (child under CursorGlow)
@@ -1362,60 +1268,6 @@ function CursorGlow:OnInitialize()
         AceConfigDialog:AddToBlizOptions("CursorGlow Profiles", "Profiles", "CursorGlow")
     else
         DEFAULT_CHAT_FRAME:AddMessage("CursorGlow: options table is missing; settings panel not registered.")
-    end
-end
-
-local function ResolveCursorGlowCategoryID()
-    if CursorGlow._settingsCategoryID and CursorGlow._settingsCategory then
-        return CursorGlow._settingsCategoryID, CursorGlow._settingsCategory
-    end
-
-    if CursorGlow._blizzPanel then
-        local cid = CursorGlow._blizzPanel.ID or (CursorGlow._blizzPanel.GetID and CursorGlow._blizzPanel:GetID())
-        if type(cid) == "number" then
-            CursorGlow._settingsCategoryID = cid
-            return cid, CursorGlow._settingsCategory
-        end
-    end
-
-    if Settings and Settings.GetCategory then
-        local cat = Settings.GetCategory("CursorGlow")
-        local cid = cat and (cat.ID or (cat.GetID and cat:GetID()))
-        if type(cid) == "number" then
-            CursorGlow._settingsCategoryID = cid
-            CursorGlow._settingsCategory = cat
-            return cid, cat
-        end
-    end
-
-    return nil, nil
-end
-
-local function OpenCursorGlowCategory()
-    EnsureSettingsLoaded()
-
-    local id, cat = ResolveCursorGlowCategoryID()
-    if Settings and Settings.OpenToCategory then
-        -- Prefer the category object (Midnight/12.x)
-        if cat then
-            Settings.OpenToCategory(cat)
-            return
-        elseif id then
-            Settings.OpenToCategory(id)
-            return
-        end
-    end
-
-    -- Pre-12 scroll hint; harmless on 12.x
-    if C_SettingsUtil and C_SettingsUtil.OpenSettingsPanel then
-        C_SettingsUtil.OpenSettingsPanel(nil, "CursorGlow")
-        return
-    end
-
-    -- Legacy fallback
-    if InterfaceOptionsFrame_OpenToCategory then
-        InterfaceOptionsFrame_OpenToCategory("CursorGlow")
-        InterfaceOptionsFrame_OpenToCategory("CursorGlow")
     end
 end
 
@@ -1555,54 +1407,10 @@ local function SpawnIdleSparkle(cursorX, cursorY)
     end)
 end
 
+-- OnUpdate
 frame:SetScript("OnUpdate", function(_, elapsed)
     local profile = CursorGlow.db.profile
     if not profile then return end
-
-    -- >>> Simple outline mode: faint outline of the glove cursor <<<
-    if profile.simpleGlowEnabled then
-        local scale = UIParent:GetEffectiveScale()
-        local cursorX, cursorY = GetCursorPosition()
-        if cursorX == 0 and cursorY == 0 then return end
-
-        -- hide other effects
-        zzzFont:Hide()
-        ClearIdleSparkles()
-        for _, group in pairs(tailTextures) do
-            for _, t in ipairs(group or {}) do if t then t:Hide() end end
-        end
-
-        local size      = profile.simpleGlowSize or 96
-        local alpha     = profile.simpleGlowOpacity or 0.45
-        local thickness = profile.simpleGlowThickness or 6
-        local cr, cg, cb = (profile.simpleGlowColor and profile.simpleGlowColor[1]) or 0.8,
-                           (profile.simpleGlowColor and profile.simpleGlowColor[2]) or 0.9,
-                           (profile.simpleGlowColor and profile.simpleGlowColor[3]) or 1
-
-        -- honor colorblind transform if enabled
-        if profile.colorblindEnabled then
-            cr, cg, cb = ApplyColorblindTransform(cr, cg, cb, profile.colorblindMode or "none")
-        end
-
-        EnsureOutlinePool(profile.simpleGlowTexture)
-
-        local offsets = {
-            { thickness, 0 }, { -thickness, 0 }, { 0, thickness }, { 0, -thickness },
-            { thickness, thickness }, { thickness, -thickness }, { -thickness, thickness }, { -thickness, -thickness },
-        }
-
-        for i, off in ipairs(offsets) do
-            local t = outlinePool[i]
-            t:ClearAllPoints()
-            t:SetPoint("CENTER", UIParent, "BOTTOMLEFT", (cursorX + off[1]) / scale, (cursorY + off[2]) / scale)
-            t:SetSize(size, size)
-            t:SetVertexColor(cr, cg, cb, alpha)
-            t:Show()
-        end
-
-        prevX, prevY = cursorX, cursorY
-        return
-    end
 
     local scale = UIParent:GetEffectiveScale()
     local cursorX, cursorY = GetCursorPosition()
