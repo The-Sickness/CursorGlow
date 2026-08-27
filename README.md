@@ -89,12 +89,21 @@ Everything is configurable through a built-in settings menu integrated directly 
 
 | Language | Locale | Contributor |
 |---|---|---|
-| Traditional Chinese | zhTW | [EKE00372](https://github.com/EKE00372) |
-| Simplified Chinese | zhCN | [EKE00372](https://github.com/EKE00372) |
+| English | enUS | Built-in |
+| Spanish (Spain) | esES | Built-in |
+| Spanish (Mexico) | esMX | Built-in |
+| French | frFR | Built-in |
+| German | deDE | Built-in |
+| Italian | itIT | Built-in |
+| Korean | koKR | Built-in |
+| Russian | ruRU | Built-in |
+| Ukrainian | ukUA | Built-in |
+| Chinese (Simplified) | zhCN | [EKE00372](https://github.com/EKE00372) |
+| Chinese (Traditional) | zhTW | [EKE00372](https://github.com/EKE00372) |
 
-Special thanks to **EKE00372** for making CursorGlow accessible to the Chinese-speaking WoW community. Contributions like this are what keep addons alive.
+Special thanks to **EKE00372** for translating both Chinese locales and making CursorGlow accessible to the Chinese-speaking WoW community.
 
-> Want to add a localization for another language? Open a pull request — all contributions are welcome.
+> Want to add or improve a localization? Open a pull request — all contributions are welcome.
 
 ---
 
