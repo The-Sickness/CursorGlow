@@ -1,29 +1,146 @@
-CursorGlow is an immersive, highly customizable addon designed to enhance your World of Warcraft gameplay by adding dynamic visual effects to your cursor. This addon brings life to your cursor with various glowing textures and colors that can be adjusted to match your character or your mood.
+<div align="center">
 
-Key Features:
+<h1>✨ CursorGlow</h1>
 
-Class Color Initialization: On first use, CursorGlow automatically sets the cursor glow to your character's class color, offering a personalized touch right from the start.
+<p><strong>Never lose sight of your cursor again.</strong><br>
+Dynamic, fully customizable cursor glow effects for World of Warcraft — styled to match your class, your mood, or your stream.</p>
 
-Wide Variety of Textures: Choose from over 20 unique textures including rings and stars, designed to suit all tastes and preferences.
+![Version](https://img.shields.io/badge/version-6.1-gold?style=flat-square&color=c8a032)
+![Game](https://img.shields.io/badge/WoW-Retail-blue?style=flat-square&color=3a6bbf)
+![Cata](https://img.shields.io/badge/Cataclysm-Compatible-blue?style=flat-square&color=5a3a8f)
+![Textures](https://img.shields.io/badge/textures-20%2B-blue?style=flat-square&color=3a6bbf)
+![Language](https://img.shields.io/badge/Lua-100%25-blue?style=flat-square&color=2c5fa8)
 
-Customizable Colors: Beyond the initial class color, you have a spectrum of color choices from simple RGB to specific WoW class colors.
+</div>
 
-Dynamic Size Adjustment: The addon smartly adjusts the texture size based on your movement, making the cursor glow more noticeable during rapid movements.
+---
 
-Combat Mode Specificity: Configure CursorGlow to activate only during combat, always, or even just on your cursor, giving you full control over when you see the effects.
+## 🌟 What Is CursorGlow?
 
-Easy Configuration: Comes with a straightforward configuration menu integrated into the WoW interface, allowing you to personalize settings without typing commands.
+CursorGlow adds dynamic glowing visual effects around your cursor. On first load it automatically picks your character's class color, so it feels personal right out of the box. From there you have full control over textures, colors, size behavior, and exactly when the glow appears.
 
-Whether you want your cursor to stand out with a bright pink star during a raid or a subtle blue swirl while exploring, CursorGlow offers a fun and functional way to make your gameplay experience uniquely yours. Perfect for streamers looking to add that extra flair to their streams or for players who just want a bit more sparkle in their game.
+Whether you want a subtle swirl while questing or a blazing star during a raid, CursorGlow makes your cursor uniquely yours. It is especially popular with streamers who want that extra visual flair on camera.
 
- 
-Elevate your gaming experience with CursorGlow - because even a cursor deserves to shine!
+---
 
- 
+## ✨ Features
 
-Contributors:
+<details>
+<summary><strong>🎨 Class Color on First Launch</strong></summary>
+<br>
 
-Special thanks to EKE00372 for translating the addon into Traditional Chinese (zhTW) and Simplified Chinese (zhCN). Your efforts help make this addon accessible to a wider audience across the Chinese-speaking community.
- 
+When you install CursorGlow and log in for the first time, the glow is automatically set to your character's class color. No setup required — it just works.
 
-FYI...it does work in Cataclysm
+</details>
+
+<details>
+<summary><strong>🖼️ 20+ Unique Textures</strong></summary>
+<br>
+
+Choose from over 20 textures including rings, stars, swirls, and more. There is something for every taste, from clean and minimal to vibrant and dramatic.
+
+</details>
+
+<details>
+<summary><strong>🌈 Full Color Control</strong></summary>
+<br>
+
+Go beyond the class color default with a full spectrum of options:
+
+- Simple **RGB** color picker
+- All **WoW class colors** available as presets
+- Mix and match to fit any character or mood
+
+</details>
+
+<details>
+<summary><strong>📐 Dynamic Size Based on Movement</strong></summary>
+<br>
+
+The glow texture scales up when you move quickly and settles when you slow down, making the effect feel alive and reactive rather than static.
+
+</details>
+
+<details>
+<summary><strong>⚔️ Combat Mode Options</strong></summary>
+<br>
+
+Choose exactly when CursorGlow activates:
+
+| Mode | Behavior |
+|---|---|
+| **Always** | Glow is visible at all times |
+| **Combat only** | Glow activates when you enter combat |
+| **Cursor only** | Effect stays tightly around the cursor tip |
+
+</details>
+
+<details>
+<summary><strong>⚙️ In-Game Config Menu</strong></summary>
+<br>
+
+Everything is configurable through a built-in settings menu integrated directly into the WoW interface. No slash commands required.
+
+</details>
+
+---
+
+## 🌍 Localization
+
+| Language | Locale | Contributor |
+|---|---|---|
+| Traditional Chinese | zhTW | [EKE00372](https://github.com/EKE00372) |
+| Simplified Chinese | zhCN | [EKE00372](https://github.com/EKE00372) |
+
+Special thanks to **EKE00372** for making CursorGlow accessible to the Chinese-speaking WoW community. Contributions like this are what keep addons alive.
+
+> Want to add a localization for another language? Open a pull request — all contributions are welcome.
+
+---
+
+## 📦 Installation
+
+<details>
+<summary><strong>Via CurseForge or Wago (recommended)</strong></summary>
+<br>
+
+Search for **CursorGlow** in the [CurseForge App](https://www.curseforge.com) or [Wago Addons](https://addons.wago.io) and install with one click. Updates are handled automatically.
+
+</details>
+
+<details>
+<summary><strong>Manual Install</strong></summary>
+<br>
+
+1. Download the latest release from the [Releases page](https://github.com/The-Sickness/CursorGlow/releases)
+2. Extract the zip file
+3. Copy the `CursorGlow` folder into your WoW addons directory:
+   ```
+   World of Warcraft/_retail_/Interface/AddOns/
+   ```
+4. Launch WoW and enable the addon in the Addon Manager at the character select screen
+
+</details>
+
+---
+
+## 🔧 Compatibility
+
+| Version | Status |
+|---|---|
+| WoW Retail | ✅ Supported |
+| Cataclysm Classic | ✅ Confirmed working |
+
+---
+
+## 🤝 Contributing
+
+Bug reports, feature suggestions, and pull requests are all welcome. Open an [issue](https://github.com/The-Sickness/CursorGlow/issues) or submit a PR and it will be reviewed promptly.
+
+---
+
+<div align="center">
+
+*Because even a cursor deserves to shine.*
+
+</div>
